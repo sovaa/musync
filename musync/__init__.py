@@ -24,24 +24,30 @@ Basic Classes
 printer - handles everything that needs to be printed.
 """
 
-import musync.printer; # app.printer module
-import musync.dbman as db;
-import musync.opts; #options
-import musync.op;
-import musync.hints;
-import musync.formats;
-import musync.locker;
-import musync.sign;
-import musync.errors;
+import musync.printer
 
-import signal;
-import sys;
-import traceback;
-#import codecs;      # For utf-8 file support
-#set language-specific stuff:
-#language, output_encoding = locale.getdefaultlocale()
+# app.printer module
+import musync.dbman as db
+import musync.opts
 
-#global stop variable
+# options
+import musync.op
+import musync.hints
+import musync.formats
+import musync.locker
+import musync.sign
+import musync.errors
+
+import signal
+import sys
+import traceback
+
+# import codecs;      # For utf-8 file support
+# set language-specific stuff:
+# language, output_encoding = locale.getdefaultlocale()
+
+# global stop variable
+
 
 def op_add(app, source):
     """
@@ -50,35 +56,36 @@ def op_add(app, source):
     """
 
     if source.isdir():
-        app.printer.notice("ignoring directory:", source.path);
-        return;
-   
+        app.printer.notice("ignoring directory:", source.path)
+        return
+
     if not source.isfile():
-        app.printer.warning("not a file:", source.path);
-        return;
-    
+        app.printer.warning("not a file:", source.path)
+        return
+
     if not source.meta:
-        app.printer.warning("could not open metadata:", source.path);
-        return;
-    
+        app.printer.warning("could not open metadata:", source.path)
+        return
+
     # this causes nice display of artist/album
-    app.printer.focus(source.meta);
-    
-    target = db.build_target(app, source);
-    
+    app.printer.focus(source.meta)
+
+    target = db.build_target(app, source)
+
     if app.locker.islocked(target):
-        app.printer.warning("locked:", source.path);
+        app.printer.warning("locked:", source.path)
         return
 
     if app.lambdaenv.pretend:
-        app.printer.notice("would add:", source.path);
-        app.printer.action("       as:", target.relativepath());
+        app.printer.notice("would add:", source.path)
+        app.printer.action("       as:", target.relativepath() or target.path)
     else:
-        app.printer.action("adding file:", target.relativepath());
-        db.add(app, source, target);
-    
+        app.printer.action("adding file:", target.relativepath() or target.path)
+        db.add(app, source, target)
+
     if app.lambdaenv.lock:
-        op_lock(app, target);
+        op_lock(app, target)
+
 
 def op_remove(app, source):
     """
@@ -88,135 +95,141 @@ def op_remove(app, source):
 
     if source.isdir():
         if not source.inroot():
-            app.printer.warning("cannot remove directory (not in root):", source.path);
+            app.printer.warning("cannot remove directory (not in root):", source.path)
             return
-        
+
         if not source.isempty():
-            app.printer.warning("cannot remove directory (not empty):", source.relativepath());
-            return;
-        
+            app.printer.warning(
+                "cannot remove directory (not empty):", source.relativepath()
+            )
+            return
+
         if app.lambdaenv.pretend:
-            app.printer.notice("would remove empty dir:", source.relativepath());
-            return;
+            app.printer.notice("would remove empty dir:", source.relativepath())
+            return
         else:
-            app.printer.action("removing directory:", source.relativepath());
-            source.rmdir();
-            return;
-        
-        return;
-    
+            app.printer.action("removing directory:", source.relativepath())
+            source.rmdir()
+            return
+
+        return
+
     elif source.isfile():
         if not source.meta:
-            app.printer.warning("could not open metadata:", source.path);
-            return;
-        
+            app.printer.warning("could not open metadata:", source.path)
+            return
+
         # this causes nice display of artist/album
-        app.printer.focus(source.meta);
-        
+        app.printer.focus(source.meta)
+
         # build target path
-        target = db.build_target(app, source);
-        
+        target = db.build_target(app, source)
+
         if app.locker.islocked(target):
-            app.printer.warning("locked:", target.relativepath());
-            return;
-        
+            app.printer.warning("locked:", target.relativepath())
+            return
+
         if app.locker.parentislocked(target):
-            app.printer.warning("locked:", target.relativepath(), "(parent)");
-            return;
-        
+            app.printer.warning("locked:", target.relativepath(), "(parent)")
+            return
+
         if not target.isfile():
-            app.printer.warning("target file not found:", target.relativepath());
-            return;
-        
+            app.printer.warning("target file not found:", target.relativepath())
+            return
+
         if app.lambdaenv.pretend:
-            app.printer.notice(     "would remove:", source.path);
-            app.printer.blanknotice("          as:", target.relativepath());
+            app.printer.notice("would remove:", source.path)
+            app.printer.blanknotice("          as:", target.relativepath())
         else:
-            app.printer.action("removing file:", target.relativepath());
-            db.remove(app, source, target);
-        
-        return;
-    
-    app.printer.warning("cannot handle file:", source.path);
+            app.printer.action("removing file:", target.relativepath())
+            db.remove(app, source, target)
+
+        return
+
+    app.printer.warning("cannot handle file:", source.path)
+
 
 def op_fix(app, source):
     """
     Operation to fix files in filestructure.
     @param source Path object to file being fixed.
     """
-    
+
     if not source.inroot():
-        app.printer.warning("can only fix files in 'root'");
-        return;
-    
+        app.printer.warning("can only fix files in 'root'")
+        return
+
     if app.locker.islocked(source):
-        app.printer.warning("locked:", source.relativepath());
-        return;
-    
+        app.printer.warning("locked:", source.relativepath())
+        return
+
     if app.locker.parentislocked(source):
-        app.printer.warning("locked:", source.relativepath(), "(parent)");
-        return;
+        app.printer.warning("locked:", source.relativepath(), "(parent)")
+        return
 
     if not source.exists():
-        app.printer.warning("path not found:", source.path);
-        return;
-    
+        app.printer.warning("path not found:", source.path)
+        return
+
     if source.isfile():
         if source.path == app.lambdaenv.lockdb():
-            app.printer.action("ignoring lock-file");
-            return;
-        
+            app.printer.action("ignoring lock-file")
+            return
+
         # try to open, if you cannot, remove the files
         if not source.meta:
-            app.printer.action("removing", source.path);
-            app.lambdaenv.rm(source.path);
-	  
-    target = None;
+            app.printer.action("removing", source.path)
+            app.lambdaenv.rm(source.path)
+
+    target = None
     if source.isfile():
         if not source.meta:
-            app.printer.warning("could not open metadata:", source.path);
-            return;
+            app.printer.warning("could not open metadata:", source.path)
+            return
 
         # print nice focusing here aswell
-        app.printer.focus(source.meta);
-        
-        target = db.build_target(app, source);
+        app.printer.focus(source.meta)
+
+        target = db.build_target(app, source)
     else:
-        target = source;
-    
+        target = source
+
     def fix_file(app, s, t):
         if t.path == s.path:
-            app.printer.notice("sane - " + t.relativepath());
-            return;
-        
+            app.printer.notice("sane - " + t.relativepath())
+            return
+
         if not t.isfile() and not t.islink():
             if app.lambdaenv.pretend:
-                app.printer.action("would add insane file - " + s.relativepath());
-                app.printer.action("                   as - " + t.relativepath());
+                app.printer.action("would add insane file - " + s.relativepath())
+                app.printer.action("                   as - " + t.relativepath())
             else:
-                app.printer.action("adding insane file - " + s.relativepath());
-                app.printer.action("                as - " + t.relativepath());
-                db.add(app, s, t);
-                
+                app.printer.action("adding insane file - " + s.relativepath())
+                app.printer.action("                as - " + t.relativepath())
+                db.add(app, s, t)
+
                 if s.isfile():
-                    app.printer.action("removing insane file - " + s.relativepath());
-                    app.lambdaenv.rm(s);
-    
+                    app.printer.action("removing insane file - " + s.relativepath())
+                    app.lambdaenv.rm(s)
+
     def fix_dir(app, s):
         if s.isempty():
-            if app.lambdaenv.pretend: 
-                app.printer.action("would remove empty dir - " + s.relativepath());
+            if app.lambdaenv.pretend:
+                app.printer.action("would remove empty dir - " + s.relativepath())
             else:
-                app.printer.action("removing empty dir - " + s.relativepath());
-                s.rmdir();
-            
+                app.printer.action("removing empty dir - " + s.relativepath())
+                s.rmdir()
+
             if app.lambdaenv.lock:
-                op_lock(app, target);
+                op_lock(app, target)
         else:
-            app.printer.notice("sane - " + s.relativepath());
-    
-    if source.isfile():   fix_file(app, source, target);
-    elif source.isdir():  fix_dir(app, source);
+            app.printer.notice("sane - " + s.relativepath())
+
+    if source.isfile():
+        fix_file(app, source, target)
+    elif source.isdir():
+        fix_dir(app, source)
+
 
 def op_lock(app, source):
     """
@@ -225,67 +238,69 @@ def op_lock(app, source):
     """
 
     if not source.inroot():
-        app.printer.warning("can only lock files in 'root'");
-        return;
+        app.printer.warning("can only lock files in 'root'")
+        return
 
     if app.lambdaenv.pretend:
-        app.printer.action("would try to lock:", source.path);
-        return;
-    
+        app.printer.action("would try to lock:", source.path)
+        return
+
     if source.isdir():
-        app.locker.lock(source);
-        app.printer.notice("dir has been locked:", source.path);
-        return;
+        app.locker.lock(source)
+        app.printer.notice("dir has been locked:", source.path)
+        return
     elif source.isfile():
-        app.locker.lock(source);
-        app.printer.notice("file has been locked:", source.path);
-        return;
-    
-    app.printer.warning("cannot handle file:", source.path);
+        app.locker.lock(source)
+        app.printer.notice("file has been locked:", source.path)
+        return
+
+    app.printer.warning("cannot handle file:", source.path)
+
 
 def op_unlock(app, source):
     """
     Unlock a file, making it available to adding, removing and such.
     @param source Path object to file being unlocked.
     """
-    
+
     if not source.inroot():
-        app.printer.warning("can only unlock files in 'root'");
-        return;
+        app.printer.warning("can only unlock files in 'root'")
+        return
 
     if app.lambdaenv.pretend:
-        app.printer.action("would try to unlock:", source.path);
-        return;
-    
+        app.printer.action("would try to unlock:", source.path)
+        return
+
     if source.isfile():
         if app.locker.islocked(source):
-            app.locker.unlock(source);
-            app.printer.notice("path has been unlocked:", source.path);
+            app.locker.unlock(source)
+            app.printer.notice("path has been unlocked:", source.path)
         elif app.locker.parentislocked(source):
-            tp = source.parent();
-            app.printer.warning("parent is locked:", tp.path);
+            tp = source.parent()
+            app.printer.warning("parent is locked:", tp.path)
         else:
-            app.printer.warning("path is not locked:", source.path);
-        return;
+            app.printer.warning("path is not locked:", source.path)
+        return
     elif source.isdir():
-        app.locker.unlock(source);
-        app.printer.notice("dir has been unlocked:", source.path);
-        return;
-    
-    app.printer.warning("cannot handle file:", source.path);
+        app.locker.unlock(source)
+        app.printer.notice("dir has been unlocked:", source.path)
+        return
+
+    app.printer.warning("cannot handle file:", source.path)
+
 
 def op_inspect(app, source):
     """
     give a friendly suggestion of how you would name a specific file.
     """
-    
+
     if not source.isfile():
-        app.printer.warning("not a file:", source.path);
-        return;
-    
+        app.printer.warning("not a file:", source.path)
+        return
+
     if not source.meta:
-        app.printer.warning("could not open metadata:", source.path);
-        return;
+        app.printer.warning("could not open metadata:", source.path)
+        return
 
     app.printer.boldnotice(source.meta.filename)
     app.printer.blanknotice("artist:    ", repr(source.meta.artist))
@@ -293,121 +308,123 @@ def op_inspect(app, source):
     app.printer.blanknotice("title:     ", repr(source.meta.title))
     app.printer.blanknotice("track:     ", repr(source.meta.track))
     app.printer.blanknotice("year:      ", repr(source.meta.year))
-    app.printer.blanknotice("targetpath:", repr(app.lambdaenv.targetpath(source)), "from", app.settings.targetpath);
+    app.printer.blanknotice(
+        "targetpath:",
+        repr(app.lambdaenv.targetpath(source)),
+        "from",
+        app.settings.targetpath,
+    )
+
+
+def print_if_verbose(app, if_pretend: str, if_real: str):
+    if app.lambdaenv.verbose:
+        if app.lambdaenv.pretend:
+            app.printer.boldnotice("# Pretending to remove files...")
+        else:
+            app.printer.boldnotice("# Removing files...")
+
 
 def main(app):
     if len(app.args) < 1:
-        raise musync.errors.FatalException("To few arguments");
-    
-    #try to figure out operation.
-    if app.args[0] in ("help"):
-        print musync.opts.Usage();
-        return 0;
-    
-    elif app.args[0] in ("rm","remove"):  #remove files from depos
+        raise musync.errors.FatalException("To few arguments")
 
-        if app.lambdaenv.verbose:
-            if app.lambdaenv.pretend:
-                app.printer.boldnotice("# Pretending to remove files...");
-            else:
-                app.printer.boldnotice("# Removing files...");
-        
-        musync.op.operate(app, op_remove);
-    elif app.args[0] in ("add","sync"): #syncronize files with musicdb
+    # try to figure out operation.
+    if app.args[0] in ("help",):
+        print(musync.opts.Usage())
+        return 0
 
-        if app.lambdaenv.verbose:
-            if app.lambdaenv.pretend:
-                app.printer.boldnotice("# Pretending to add files...");
-            else:
-                app.printer.boldnotice("# Adding files...");
-            
-        musync.op.operate(app, op_add);
-    elif app.args[0] in ("fix"): #syncronize files with musicdb
+    elif app.args[0] in ("rm", "remove"):  # remove files from depos
+        print_if_verbose(app, "Pretending to remove", "Removing")
+        musync.op.operate(app, op_remove)
 
-        if app.lambdaenv.verbose:
-            if app.lambdaenv.pretend:
-                app.printer.boldnotice("# Pretending to fix files...");
-            else:
-                app.printer.boldnotice("# Fixing files...");
+    elif app.args[0] in ("add", "sync"):  # synchronize files with musicdb
+        print_if_verbose(app, "Pretending to add", "Adding")
+        musync.op.operate(app, op_add)
 
+    elif app.args[0] in ("fix",):  # synchronize files with musicdb
+        print_if_verbose(app, "Pretending to fix", "Fixing")
         # make sure all paths are referenced relative to root.
-        musync.op.operate(app, op_fix);
-    elif app.args[0] in ("lock"):
+        musync.op.operate(app, op_fix)
 
-        if app.lambdaenv.verbose:
-            if app.lambdaenv.pretend:
-                app.printer.boldnotice("# Pretending to lock files...");
-            else:
-                app.printer.boldnotice("# Locking files...");
-        
-        musync.op.operate(app, op_lock);
-    elif app.args[0] in ("unlock"):
+    elif app.args[0] in ("lock",):
+        print_if_verbose(app, "Pretending to lock", "Locking")
+        musync.op.operate(app, op_lock)
 
-        if app.lambdaenv.verbose:
-            if app.lambdaenv.pretend:
-                app.printer.boldnotice("# Pretending to unlock files...");
-            else:
-                app.printer.boldnotice("# Unlocking files...");
-        
-        musync.op.operate(app, op_unlock);
-    elif app.args[0] in ("inspect"):
-        app.printer.boldnotice("# Inspecting files...");
-        musync.op.operate(app, op_inspect);
+    elif app.args[0] in ("unlock",):
+        print_if_verbose(app, "Pretending to unlock", "Unlocking")
+        musync.op.operate(app, op_unlock)
+
+    elif app.args[0] in ("inspect",):
+        app.printer.boldnotice("# Inspecting files...")
+        musync.op.operate(app, op_inspect)
+
     else:
-        raise musync.errors.FatalException("no such operation: " + app.args[0]);
-    
+        raise musync.errors.FatalException("no such operation: " + app.args[0])
+
     if app.lambdaenv.verbose:
         if app.lambdaenv.pretend:
-            app.printer.boldnotice("# Pretending done!");
+            app.printer.boldnotice("# Pretending done!")
         else:
-            app.printer.boldnotice("# Done!");
-    
-    app.locker.stop();
-    return 0;
+            app.printer.boldnotice("# Done!")
+
+    app.locker.stop()
+    return 0
+
 
 # assign different signal handlers.
 try:
-    def exithandler(signum,frame):
-        signal.signal(signal.SIGINT, signal.SIG_IGN);
-        signal.signal(signal.SIGTERM, signal.SIG_IGN);
-        musync.sign.Interrupt = True;
 
-    signal.signal(signal.SIGINT, exithandler);
-    signal.signal(signal.SIGTERM, exithandler);
+    def exithandler(signum, frame):
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        musync.sign.Interrupt = True
+
+    signal.signal(signal.SIGINT, exithandler)
+    signal.signal(signal.SIGTERM, exithandler)
 #   signal.signal(signal.SIGPIPE, signal.SIG_IGN); removed to suite windows?
 except KeyboardInterrupt:
-    sys.exit(1);
+    sys.exit(1)
+
 
 # This block ensures that ^C interrupts are handled quietly.
 def entrypoint():
     try:
-        app = musync.opts.AppSession(sys.argv[1:], sys.stdout);
-    except Exception, e:
-        print traceback.format_exc();
-        sys.exit(1);
-        return;
+        app = musync.opts.AppSession(sys.argv[1:], sys.stdout)
+    except Exception as e:
+        print(traceback.format_exc())
+        sys.exit(1)
+        return
 
     if not app.configured:
-        sys.exit(1);
-    
+        sys.exit(1)
+
     try:
-        main(app);
-    except musync.errors.FatalException, e: # break execution exception.
-        app.printer.error((str(e)));
+        main(app)
+    except musync.errors.FatalException as e:  # break execution exception.
+        app.printer.error((str(e)))
         if app.lambdaenv.debug:
-            print traceback.format_exc();
-    except Exception, e: # if this happens, something went really bad.
-        app.printer.error("Fatal Exception:", str(e));
-        print traceback.format_exc();
-        app.printer.error("Something went very wrong, please report this error at:", musync.opts.REPORT_ADDRESS);
-        sys.exit(1);
-    except SystemExit, e: # interrupts and such
-        sys.exit(e);
-    
+            print(traceback.format_exc())
+    except Exception as e:  # if this happens, something went really bad.
+        app.printer.error("Fatal Exception:", str(e))
+        print(traceback.format_exc())
+        app.printer.error(
+            "Something went very wrong, please report this error at:",
+            musync.opts.REPORT_ADDRESS,
+        )
+        sys.exit(1)
+    except SystemExit as e:  # interrupts and such
+        sys.exit(e)
+
     if app.lambdaenv.verbose:
-        app.printer.boldnotice("handled", musync.op.handled_files, "files and", musync.op.handled_dirs, "directories");
-    
-    #musync.hints.run(app);
-    
-    # FIXME this might be unsafe 
-    sys.exit(musync.sign.ret());
+        app.printer.boldnotice(
+            "handled",
+            musync.op.handled_files,
+            "files and",
+            musync.op.handled_dirs,
+            "directories",
+        )
+
+    # musync.hints.run(app);
+
+    # FIXME this might be unsafe
+    sys.exit(musync.sign.ret())

@@ -17,81 +17,82 @@
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import string;
-import os.path;
+import string
+import os.path
+
 
 class LockFileDB:
     def __init__(self, app, lock_path):
-        self.app = app;
-        self.changed = False;
-        self.removed = False;
-        self.lock_path = lock_path;
-        
+        self.app = app
+        self.changed = False
+        self.removed = False
+        self.lock_path = lock_path
+
         if not os.path.isfile(self.lock_path):
-            f = open(self.lock_path, "w");
-            f.close();
-        
-        f = open(self.lock_path, "r");
-        self.DB = [x.strip(string.whitespace) for x in f.readlines()];
-        f.close();
-        
-        self.DB_NEWS=[]
+            f = open(self.lock_path, "w")
+            f.close()
+
+        f = open(self.lock_path, "r")
+        self.DB = [x.strip(string.whitespace) for x in f.readlines()]
+        f.close()
+
+        self.DB_NEWS = []
 
     def unlock(self, path):
         if not self.islocked(path):
-            self.app.notice("is not locked:", path.path);
-            return False;
-        
+            self.app.notice("is not locked:", path.path)
+            return False
+
         if not path.inroot():
-            self.app.warning("is not in root:", path.path);
-            return False;
-        
-        self.DB.remove(path.relativepath());
-        self.changed = True;
-        self.removed = True;
+            self.app.warning("is not in root:", path.path)
+            return False
+
+        self.DB.remove(path.relativepath())
+        self.changed = True
+        self.removed = True
 
     def lock(self, path):
         if self.islocked(path):
-            self.app.notice("is already locked:", path.path);
-            return False;
+            self.app.notice("is already locked:", path.path)
+            return False
 
         if self.parentislocked(path):
-            self.app.notice("is already locked (parent):", path.path);
-            return False;
-        
+            self.app.notice("is already locked (parent):", path.path)
+            return False
+
         if not path.inroot():
-            self.app.warning("is not in root:", path.path);
-            return False;
-        
-        self.DB_NEWS.append(path.relativepath() + "\n");
-        self.changed = True;
+            self.app.warning("is not in root:", path.path)
+            return False
+
+        self.DB_NEWS.append(path.relativepath() + "\n")
+        self.changed = True
 
     def islocked(self, path):
         if path.relativepath() in self.DB:
-            return True;
+            return True
         else:
-            return False;
-    
+            return False
+
     def parentislocked(self, path):
         if path.parent().relativepath() in self.DB:
-            return True;
-        
-        return False;
-    
+            return True
+
+        return False
+
     def stop(self):
         if self.changed:
             # this will trigger writing if database has been changed.
             if not os.path.isfile(self.lock_path):
-                f = open(self.lock_path, "w");
-                f.close();
-            
+                f = open(self.lock_path, "w")
+                f.close()
+
             if self.removed:
-                f = open(self.lock_path, "w");
+                f = open(self.lock_path, "w")
                 for p in self.DB:
-                    f.writelines(p);
-                    f.write("\n");
-                f.close();
+                    f.writelines(p)
+                    f.write("\n")
+                f.close()
             else:
-                f = open(self.lock_path, "a");
-                f.writelines(self.DB_NEWS);
-                f.close();
+                f = open(self.lock_path, "a")
+                f.writelines(self.DB_NEWS)
+                f.close()

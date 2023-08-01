@@ -1,5 +1,5 @@
-import mutagen.mp4;
-import mutagen.id3;
+import mutagen.mp4
+import mutagen.id3
 
 # |      '<A9>nam' -- track title
 # |      '<A9>alb' -- album
@@ -27,27 +27,28 @@ import mutagen.id3;
 # |      'sosn' -- show sort order
 # |      'tvsh' -- show name
 
-import meta;
+from . import meta
+
 
 class MP4TagsMetaFile(meta.MetaFile):
     __translate__ = {
-        '\xa9nam': "title",
-        '\xa9alb': "album",
-        '\xa9ART': "artist",
-        'aART': "artist",
+        "\xa9nam": "title",
+        "\xa9alb": "album",
+        "\xa9ART": "artist",
+        "aART": "artist",
         #'sonm': "track",
-        'trkn': "track",
-        'purd': "year",
-        '\xa9day': "year",
-    };
-    
+        "trkn": "track",
+        "purd": "year",
+        "\xa9day": "year",
+    }
+
     def __init__(self, f, tags):
-        meta.MetaFile.__init__(self, f, tags);
+        meta.MetaFile.__init__(self, f, tags)
 
         if self.track:
-            self.track = self.track[0];
-        
+            self.track = self.track[0]
+
         # mp4 is not documented, but it seems to have the same format as
         # ID3TimeStamp (subset of ISO 8601)
         if self.year:
-            self.year = mutagen.id3.ID3TimeStamp(self.year).year;
+            self.year = mutagen.id3.ID3TimeStamp(self.year).year

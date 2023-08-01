@@ -21,16 +21,18 @@
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import musync.op;
+import musync.op
+
 
 def print_hint(text):
-    print "HINT: %s"%(text);
+    print("HINT: %s" % (text))
+
 
 def run(app):
     # will never hint if silent
     if app.lambdaenv.silent:
-        return;
-    
+        return
+
     if musync.op.handled_files == 0 and musync.op.handled_dirs > 0:
-        print_hint("Did you forget to use --recursive (or -R)?");
-        return;
+        print_hint("Did you forget to use --recursive (or -R)?")
+        return

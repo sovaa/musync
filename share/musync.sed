@@ -109,3 +109,6 @@ s_(%|'|"|`|,|:|;|\(|\)|\[|\]|\+|\?|\*|~|\!)__g
 #Remove 'whitespace' in the beginning and in the end
 s/_+$//
 s/^_+//
+
+#remove all non-ascii chars
+s/[^a-z0-9_]+//g

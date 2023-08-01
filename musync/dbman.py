@@ -1,6 +1,6 @@
 #
 # this is probably the must drugged file in the project
-# and this is because it is freaking hard to implement 
+# and this is because it is freaking hard to implement
 # this behaviour nicely.
 #
 # guidelines for file:
@@ -35,17 +35,19 @@
 #
 #
 
-import musync.errors;
-import musync.commons;
-import tempfile;
+import musync.errors
+import musync.commons
+import tempfile
 
-import os;
+import os
+
 # Current artist and album in focus
+
 
 def build_target(app, source, **kw):
     """
     builds a target for many of the functions in musync.dbman
-    this is just a complex concatenation of directories and 
+    this is just a complex concatenation of directories and
     filenames.
 
     notice! this function resides in this module because we havent
@@ -57,71 +59,88 @@ def build_target(app, source, **kw):
                  notice that this should have been cleaned with
                  musync.meta.cleanmeta();
     """
-    
-    return musync.commons.Path(app, os.path.join(app.lambdaenv.root, app.lambdaenv.targetpath(source)), **kw);
+    return musync.commons.Path(
+        app, os.path.join(app.lambdaenv.root, app.lambdaenv.targetpath(source)), **kw
+    )
+
 
 def hash_get(app, path):
-    return app.lambdaenv.hash(path);
+    return app.lambdaenv.hash(path)
+
 
 def add(app, p, t):
     "adds a file to the database"
 
-    from md5 import md5
+    import hashlib
 
     if not t.parent().isdir():
         # recursively makes directories.
         try:
             os.makedirs(t.dir)
-        except OSError, e:
-            raise musync.errors.FatalException(str(e));
+        except OSError as e:
+            raise musync.errors.FatalException(str(e))
 
     if t.path == p.path:
-        app.printer.warning("source and target file same");
-        return;
-    
+        app.printer.warning("source and target file same")
+        return
+
     if (t.exists() or t.islink()) and not app.lambdaenv.force:
-        app.printer.warning("file already exists:", t.relativepath());
-        return;
-    
-    # by this time, we wan't it removed.
-    if (t.exists() or t.islink()):
-        app.lambdaenv.rm(t);
-    
-    attempts = 0;
-    parity = None;
+        app.printer.warning("file already exists:", t.relativepath())
+        return
+
+    # by this time, we want it removed.
+    if t.exists() or t.islink():
+        app.lambdaenv.rm(t)
+
+    attempts = 0
+    parity = None
     while True:
         if attempts > 4:
-            raise musync.errors.FatalException("      failed to many times! :-O");
-        
+            raise musync.errors.FatalException("      failed to many times! :-O")
+
         if attempts > 0:
             if not p.exists():
-                raise musync.errors.FatalException("cannot perform add operation, source file no longer exists (this is why you should not use an destructive operation like move for adding files)!");
-        
+                raise musync.errors.FatalException(
+                    "cannot perform add operation, source file no longer exists (this is why you should not use an destructive operation like move for adding files)!"
+                )
+
         if app.lambdaenv.checkhash:
-            parity = hash_get(app, p.path);
-        
-        app.lambdaenv.add(p.path, t.path);
-        
+            parity = hash_get(app, p.path)
+
+        app.lambdaenv.add(p.path, t.path)
+
         # if settings prompt, check target file hash.
         if app.lambdaenv.checkhash:
-            check = hash_get(app, t.path);
-            
+            check = hash_get(app, t.path)
+
             if parity == check:
-                app.printer.notice(  "      checkhash successful :-) {0} equals {1}".format(md5(repr(parity)).hexdigest(), md5(repr(check)).hexdigest()) )
+                app.printer.notice(
+                    "      checkhash successful :-) {0} equals {1}".format(
+                        hashlib.md5(repr(parity).encode('utf-8')).hexdigest(),
+                        hashlib.md5(repr(check).encode('utf-8')).hexdigest()
+                    )
+                )
             else:
-                app.printer.warning( "      checkhash failed :-/ {0} is not {1}".format(repr(parity), repr(check)) )
-                attempts += 1;
-                continue;
-        break;
+                app.printer.warning(
+                    "      checkhash failed :-/ {0} is not {1}".format(
+                        repr(parity), repr(check)
+                    )
+                )
+                attempts += 1
+                continue
+        break
 
-    return True;
+    return True
 
-def remove (app, p, t):
+
+def remove(app, p, t):
     "removes a file from the database"
-    
+
     if t.path == p.path and not app.lambdaenv.force:
-        app.printer.warning("target is same as source  (use --force if you really wan't to do this)");
-        return;
-    
-    app.lambdaenv.rm(t);
-    return True;
+        app.printer.warning(
+            "target is same as source  (use --force if you really wan't to do this)"
+        )
+        return
+
+    app.lambdaenv.rm(t)
+    return True

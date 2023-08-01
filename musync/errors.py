@@ -16,11 +16,12 @@
 #    You should have received a copy of the GNU General Public License
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 
-class WarningException( Exception ):
-    def __init__(self,str):
-        Exception.__init__(self,str);
 
-class FatalException( Exception ):
-    def __init__(self,str):
-        Exception.__init__(self,str);
+class WarningException(Exception):
+    def __init__(self, str):
+        Exception.__init__(self, str)
 
+
+class FatalException(Exception):
+    def __init__(self, str):
+        Exception.__init__(self, str)

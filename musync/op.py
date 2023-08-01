@@ -22,41 +22,44 @@
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from musync.errors import FatalException, WarningException;
-import musync.opts;
-import musync.commons;
-import sys;
+from musync.errors import FatalException, WarningException
+import musync.opts
+import musync.commons
+import sys
 
-import traceback;
-import musync.sign;
+import traceback
+import musync.sign
 
 # keep track of how many directories and files we are handling.
-handled_dirs = 0;
-handled_files = 0;
+handled_dirs = 0
+handled_files = 0
 
-import cStringIO;
+import io
+
 
 def operate(app, call, inroot=False):
     """
     Operation abstraction, this is the only function used by different operations.
     """
-    
+
     for p in readargs(app, app.args[1:], inroot):
         if musync.sign.Interrupt is True:
-            musync.sign.setret(musync.sign.INTERRUPT);
-            raise FatalException("Caught Interrupt");
-        
+            musync.sign.setret(musync.sign.INTERRUPT)
+            raise FatalException("Caught Interrupt")
+
         try:
-            call(app, p);
-        except WarningException, e: # WarningExceptions are just pritned, then move of to next file.
-            app.printer.warning( str(e) );
+            call(app, p)
+        except WarningException as e:  # WarningExceptions are just printed, then move of to next file.
+            app.printer.warning(str(e))
+
+
 #    if app.lambdaenv.progress: ## run with progress.
 #        list=[];
 #        for p in readargs(args, inroot):
 #            list.append(p);
-#       
+#
 #        printer.stdout_log();
-#        
+#
 #        l=len(list);
 #        printer.write("\n", stream=sys.stdout);
 #        for i,p in enumerate(list):
@@ -74,10 +77,11 @@ def operate(app, call, inroot=False):
 #                call(p);
 #            except WarningException, e: # WarningExceptions are just pritned, then move of to next file.
 #                pass;
-#        
+#
 #        printer.stdout_normal();
-#    
+#
 #    else:
+
 
 def readargs(app, args, inroot):
     """
@@ -86,44 +90,41 @@ def readargs(app, args, inroot):
     """
     if len(args) <= 0:
         try:
-            file = sys.stdin.readline()[:-1];
-        except Exception, e:
-            raise FatalException(str(e));
-        
+            file = sys.stdin.readline()[:-1]
+        except Exception as e:
+            raise FatalException(str(e))
+
         while file:
             for p in readpaths(app, file, inroot):
-                yield p;
+                yield p
 
-            file = sys.stdin.readline()[:-1];
+            file = sys.stdin.readline()[:-1]
     else:
         while len(args) > 0:
             for p in readpaths(app, args[0], inroot):
-                yield p;
+                yield p
 
-            args = args[1:];
+            args = args[1:]
 
-    return;
 
 def readpaths(app, path, inroot):
-    """
-    
-    """
-    global handled_dirs, handled_files;
+    """ """
+    global handled_dirs, handled_files
     if inroot:
-        path = app.lambdaenv.root + "/" + path;
+        path = app.lambdaenv.root + "/" + path
 
-    p = musync.commons.Path(app, path);
+    p = musync.commons.Path(app, path)
 
     if p.isfile():
-        handled_files += 1;
+        handled_files += 1
     elif p.isdir():
         if app.lambdaenv.recursive:
             for f in p.children():
                 for t in readpaths(app, f.path, inroot):
-                    yield t;
-        
-        if p.isroot():
-            return;
-        handled_dirs += 1;
+                    yield t
 
-    yield p;
+        if p.isroot():
+            return
+        handled_dirs += 1
+
+    yield p

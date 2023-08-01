@@ -33,44 +33,47 @@
 #    make sure it is added to help-text (if necessary).
 #    make sure cli-option is parsed.
 
-import os;
-import shutil;
-import getopt;
-import tempfile;
-import types;
+import os
+import shutil
+import getopt
+import tempfile
+import types
 
-from ConfigParser import RawConfigParser;
-from musync.errors import FatalException;
+from configparser import RawConfigParser
+from musync.errors import FatalException
 
-import musync.locker;
-import musync.custom;
-import musync.printer;
+import musync.locker
+import musync.custom
+import musync.printer
 
-#operating system problems
-tmp=tempfile.gettempdir(); #general temp directory
+# operating system problems
+tmp = tempfile.gettempdir()
+# general temp directory
+
 
 class LambdaEnviron(dict):
     def __init__(self, d=dict()):
-        dict.__init__(self, d);
-    
+        dict.__init__(self, d)
+
     def __setattr__(self, key, val):
-        self.__setitem__(key, val);
-    
+        self.__setitem__(key, val)
+
     def __getattr__(self, key):
-        if not self.has_key(key):
-            raise Exception("No such key in lambdaenviron: " + key);
-        return self.__getitem__(key);
+        if key not in self:
+            raise Exception("No such key in lambdaenviron: " + key)
+        return self.__getitem__(key)
 
     def __hasattr__(self, key):
-        return self.has_key(key);
+        return key in self
+
 
 LambdaTemplate = {
-    'suppressed': [],
+    "suppressed": [],
     "pretend": False,
     "recursive": False,
     "lock": False,
-    'silent': False,
-    'verbose': True,
+    "silent": False,
+    "verbose": True,
     "force": False,
     "root": None,
     "config": None,
@@ -78,109 +81,115 @@ LambdaTemplate = {
     "debug": True,
     "configurations": [],
     "transcode": None,
-};
+}
+
 
 class AppSession:
     """
     Global application session.
     Should be common referenced in many methods.
     """
+
     def overlay_import(self, parser):
-        ok = True;
+        ok = True
 
         if not parser.has_section("import"):
-            self.printer.error("No 'import' section found in configuration");
-            return False;
-        
+            self.printer.error("No 'import' section found in configuration")
+            return False
+
         for key in parser.options("import"):
             val = parser.get("import", key)
-            
+
             if val == "":
-                self.printer.warning("ignoring empty key: " + key);
-                continue;
-            
-            import_stmt = val;
+                self.printer.warning("ignoring empty key: " + key)
+                continue
 
-            parts = import_stmt.split(".")[1:];
-            parts.reverse();
-            
-            imported_m = None;
-            
+            import_stmt = val
+
+            parts = import_stmt.split(".")[1:]
+            parts.reverse()
+
+            imported_m = None
+
             try:
-                imported_m = __import__(import_stmt);
-            except ImportError, e:
-                self.printer.error("[I] " + key + ": " + str(e));
-                ok = False;
-                continue;
-            
-            while len(parts) > 0:
-                imported_m = getattr(imported_m, parts.pop());
-            
-            self.imports[key] = val;
-            self.lambdaenv[key] = imported_m;
+                imported_m = __import__(import_stmt)
+            except ImportError as e:
+                self.printer.error("[I] " + key + ": " + str(e))
+                ok = False
+                continue
 
-        return ok;
-    
+            while len(parts) > 0:
+                imported_m = getattr(imported_m, parts.pop())
+
+            self.imports[key] = val
+            self.lambdaenv[key] = imported_m
+
+        return ok
+
     def overlay_settings(self, parser, sect):
         """
         Overlay all settings from a specific section in the configuration file.
         """
         if not parser.has_section(sect):
-            self.printer.error("section does not exist:", sect);
-            return False;
-        
-        ok = True;
-        
+            self.printer.error("section does not exist:", sect)
+            return False
+
+        ok = True
+
         for key in parser.options(sect):
-            val = parser.get(sect, key);
-            
+            val = parser.get(sect, key)
+
             if val == "":
-                self.printer.warning("ignoring empty key:", key);
-                continue;
-            
-            self.settings[key] = val;
-            
+                self.printer.warning("ignoring empty key:", key)
+                continue
+
+            self.settings[key] = val
+
             try:
-                val = eval(val, self.lambdaenv);
-            except Exception, e:
-                self.printer.error(key + ": " + str(e));
-                ok = False;
-                continue;
-            
-            self.lambdaenv[key] = val;
-        
-        return ok;
+                val = eval(val, self.lambdaenv)
+            except Exception as e:
+                self.printer.error(key + ": " + str(e))
+                ok = False
+                continue
+
+            self.lambdaenv[key] = val
+
+        return ok
 
     def read_argv(self, argv):
-        cp = RawConfigParser();
-        
-        noconfig = True;
-        
-        configuration_files = map(lambda cfgfile: os.path.expanduser(os.path.join(*cfgfile)), cfgfiles);
+        cp = RawConfigParser()
+
+        noconfig = True
+
+        configuration_files = [
+            os.path.expanduser(os.path.join(*cfgfile)) for cfgfile in cfgfiles
+        ]
 
         # not using readfiles since doesn't work under windows
         for cfg in configuration_files:
             if not os.path.isfile(cfg):
-                continue;
-            
-            noconfig = False;
-            cp.readfp(open(cfg));
+                continue
+
+            noconfig = False
+            cp.readfp(open(cfg))
 
         if noconfig:
-            self.printer.error("no configuration files found!");
-            self.printer.error("looked for:", ", ".join(configuration_files));
-            self.printer.error("an example configuration should have been bundled with this program");
-            return None, None, None;
-        
+            self.printer.error("no configuration files found!")
+            self.printer.error("looked for:", ", ".join(configuration_files))
+            self.printer.error(
+                "an example configuration should have been bundled with this program"
+            )
+            return None, None, None
+
         if not self.overlay_import(cp):
-            self.printer.error("could not overlay settings from 'import' section");
-            return None, None, None;
-        
+            self.printer.error("could not overlay settings from 'import' section")
+            return None, None, None
+
         # open log
         if not self.overlay_settings(cp, "general"):
-            self.printer.error("could not overlay settings from 'general' section");
-            return None, None, None;
-        
+            self.printer.error("could not overlay settings from 'general' section")
+            return None, None, None
+
         # import the getopt module.
         try:
             # see: http://docs.python.org/lib/module-getopt.html
@@ -199,117 +208,126 @@ class AppSession:
                     "config=",
                     "modify=",
                     "debug",
-                ]
-            );
-            
-            return cp, opts, argv;
-        except getopt.GetoptError, e:
-            self.printer.error("unknown option:", e.opt);
-            return None, None, None;
+                ],
+            )
+
+            return cp, opts, argv
+        except getopt.GetoptError as e:
+            self.printer.error("unknown option:", e.opt)
+            return None, None, None
 
     def __init__(self, argv, stream):
-        self.configured = False;
-        self.locker = None;
-        self.args = None;
-        self.printer = musync.printer.AppPrinter(self, stream);
-        self.lambdaenv=LambdaEnviron(LambdaTemplate);
-        self.imports=LambdaEnviron();
-        self.settings=LambdaEnviron();
-        
-        cp, opts, args = self.read_argv(argv);
-        
+        self.configured = False
+        self.locker = None
+        self.args = None
+        self.printer = musync.printer.AppPrinter(self, stream)
+        self.lambdaenv = LambdaEnviron(LambdaTemplate)
+        self.imports = LambdaEnviron()
+        self.settings = LambdaEnviron()
+
+        cp, opts, args = self.read_argv(argv)
+
         if cp is None:
-            return;
-        
-        #keep to set default-config or not
-        configuration = None;
-        
+            return
+
+        # keep to set default-config or not
+        configuration = None
+
         def parse_modify(self, base, arg):
             if base is None:
-                base = dict();
-            
-            i = arg.find("=");
+                base = dict()
+
+            i = arg.find("=")
             if i <= 0:
-                self.printer.warning("invalid modify argument", arg);
-                return base;
-            
-            base[arg[:i]] = arg[i+1:]
-            return base;
-        
+                self.printer.warning("invalid modify argument", arg)
+                return base
+
+            base[arg[:i]] = arg[i + 1 :]
+            return base
+
         for opt, arg in opts:
-            #loop through the arguments and do what we're supposed to do:
+            # loop through the arguments and do what we're supposed to do:
             if opt in ("-p", "--pretend"):
-                self.lambdaenv.pretend = True;
+                self.lambdaenv.pretend = True
             elif opt in ("-V", "--version"):
-                print version_str%version;
-                return None;
+                print(version_str % version)
+                return None
             elif opt in ("-R", "--recursive"):
-                self.lambdaenv.recursive = True;
+                self.lambdaenv.recursive = True
             elif opt in ("-L", "--lock"):
-                self.lambdaenv.lock = True;
-            elif opt in ( "-s", "--silent" ):
-                self.lambdaenv.silent = True;
-            elif opt in ( "-v", "--verbose" ):
-                self.lambdaenv.verbose = True;
+                self.lambdaenv.lock = True
+            elif opt in ("-s", "--silent"):
+                self.lambdaenv.silent = True
+            elif opt in ("-v", "--verbose"):
+                self.lambdaenv.verbose = True
             elif opt in ("-f", "--force"):
-                self.lambdaenv.force = True;
+                self.lambdaenv.force = True
             elif opt in ("-c", "--config"):
-                self.lambdaenv.configurations.extend(map(lambda a: a.strip(), arg.split(",")));
+                self.lambdaenv.configurations.extend(
+                    [a.strip() for a in arg.split(",")]
+                )
             elif opt in ("-M", "--modify"):
-                self.lambdaenv.modify = parse_modify(self, self.lambdaenv.modify, arg);
+                self.lambdaenv.modify = parse_modify(self, self.lambdaenv.modify, arg)
             elif opt in ("-d", "--debug"):
-                self.lambdaenv.debug = True;
+                self.lambdaenv.debug = True
             elif opt in ("--root"):
-                self.lambdaenv.root = arg;
+                self.lambdaenv.root = arg
             else:
-              self.printer.error("unkown option:", opt);
-        
+                self.printer.error("unkown option:", opt)
+
         #
         # Everytime default-config is set config must be rescanned.
         #
-        anti_circle = [];
-        
+        anti_circle = []
+
         for config in self.lambdaenv.configurations:
             self.printer.notice("overlaying", config)
 
             if config in anti_circle:
-                self.printer.error("Configuration has circular references, take a good look at key 'default-config'");
-                return;
-            
-            anti_circle.append(config);
-            
+                self.printer.error(
+                    "Configuration has circular references, take a good look at key 'default-config'"
+                )
+                return
+
+            anti_circle.append(config)
+
             if not self.overlay_settings(cp, config):
-                self.printer.error("could not overlay section:", section);
-                return;
-        
+                self.printer.error("could not overlay section:", section)
+                return
+
         if not os.path.isdir(self.lambdaenv.root):
-            self.printer.error("         root:", "Root library directory non existant, cannot continue.");
-            self.printer.error("current value:", self.lambdaenv.root);
-            return;
-        
+            self.printer.error(
+                "         root:",
+                "Root library directory non existant, cannot continue.",
+            )
+            self.printer.error("current value:", self.lambdaenv.root)
+            return
+
         # check that a specific set of lambda functions exist
         for key in ["add", "rm", "hash", "targetpath", "checkhash", "root"]:
-            if not self.lambdaenv.has_key(key):
-                self.printer.error("must be a lambda function:", key);
-                return;
-        
-        self.setup_locker(self.lambdaenv.lockdb());
-        self.args = args;
-        self.configured = True;
+            if key not in self.lambdaenv:
+                self.printer.error("must be a lambda function:", key)
+                return
+
+        self.setup_locker(self.lambdaenv.lockdb())
+        self.args = args
+        self.configured = True
 
     def setup_locker(self, path):
-        self.locker = musync.locker.LockFileDB(self, path);
+        self.locker = musync.locker.LockFileDB(self, path)
+
 
 ### This is changed with setup.py to suite environment ###
-#cfgfile="d:\\dump\\programs\\musync_x86\\musync.conf"
-cfgfiles=[["/", "etc", "musync.conf"], ["~", ".musync"]];
-version = (0,5,0,"_r0");
-version_str = "Musync, music syncronizer %d.%d.%d%s";
-REPORT_ADDRESS="http://sourceforge.net/projects/musync or johnjohn.tedro@gmail.com";
+# cfgfile="d:\\dump\\programs\\musync_x86\\musync.conf"
+cfgfiles = [["/", "etc", "musync.conf"], ["~", ".musync"]]
+version = (0, 6, 0, "_r0")
+version_str = "Musync, music syncronizer %d.%d.%d%s"
+REPORT_ADDRESS = "http://sourceforge.net/projects/musync or johnjohn.tedro@gmail.com"
 
-def Usage ():
+
+def Usage():
     "returns usage information"
-    
+
     return """
     musync - music syncing scripts
     Usage: musync [option(s)] <operation> [file1 [..]]

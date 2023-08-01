@@ -27,18 +27,21 @@ EXCEPTION = 2
 INTERRUPT = 10
 
 # This is used as a flag when interrupt is performed.
-Interrupt = False;
+Interrupt = False
 # this is what is to be returned on an interrupt or failure.
-Ret = INTERRUPT;
+Ret = INTERRUPT
+
 
 def ret():
-    global Ret;
-    return Ret;
+    global Ret
+    return Ret
+
 
 def setret(ret):
-    global Ret;
-    Ret = ret;
+    global Ret
+    Ret = ret
+
 
 def interrupt_handler(sig):
-    global Interrupt;
-    Interrupt = True;
+    global Interrupt
+    Interrupt = True

@@ -23,9 +23,10 @@
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os;
+import os
 
-import musync.formats;
+import musync.formats
+
 
 class Path:
     """
@@ -34,73 +35,74 @@ class Path:
     to represent different locations on a filesystem and
     aid in simplifying the code at _many_ locations.
     """
-    
+
     def __init__(self, app, path, **kw):
         """
         initiate variables.
         """
 
-        self.app = app;
-        
-        self._path = os.path.abspath(path);
-        
+        self.app = app
+
+        self._path = os.path.abspath(path)
+
         if "dir" in kw:
-            self.dir = kw.get("dir");
+            self.dir = kw.get("dir")
         else:
-            self.dir = os.path.dirname(self._path);
-        
+            self.dir = os.path.dirname(self._path)
+
         if "ext" in kw:
-            self.ext = kw.get("ext");
+            self.ext = kw.get("ext")
         else:
-            self.ext = os.path.splitext(self._path)[1].lower();
+            self.ext = os.path.splitext(self._path)[1].lower()
             if len(self.ext) > 0 and self.ext[0] == ".":
-                self.ext = self.ext[1:];
-        
+                self.ext = self.ext[1:]
+
         if "basename" in kw:
-            self.basename = kw.get("basename");
+            self.basename = kw.get("basename")
         else:
-            self.basename = os.path.splitext(self._path)[0];
-        
+            self.basename = os.path.splitext(self._path)[0]
+
         # open metadata if this is a file
         # if this is None, it's an indication that the file is not supported.
         if self.isfile():
-            self.meta = musync.formats.open(self.path, **self.app.lambdaenv.modify);
-    
+            self.meta = musync.formats.open(self.path, **self.app.lambdaenv.modify)
+
     def get_path(self):
         if self.ext:
-            return os.path.join(self.dir, self.basename) + "." + self.ext;
+            return os.path.join(self.dir, self.basename) + "." + self.ext
         else:
-            return os.path.join(self.dir, self.basename);
-    
+            return os.path.join(self.dir, self.basename)
+
     path = property(get_path)
-    
+
     def isfile(self):
-        return os.path.isfile(self.path);
+        return os.path.isfile(self.path)
 
     def isdir(self):
-        return os.path.isdir(self.path);
-    
+        return os.path.isdir(self.path)
+
     def islink(self):
-        return os.path.islink(self.path);
+        return os.path.islink(self.path)
 
     def exists(self):
-        return os.path.exists(self.path);
+        return os.path.exists(self.path)
 
     def isempty(self):
         if self.isdir():
             if len(os.listdir(self.path)) > 0:
-                return False;
-        return True;
+                return False
+        return True
 
     def basename(self):
-        return os.path.basename(self.path);
+        return os.path.basename(self.path)
+
     def dirname(self):
-        return os.path.dirname(self.path);
+        return os.path.dirname(self.path)
 
     def rmdir(self):
         if self.isdir():
             if self.isempty():
-                os.rmdir(self.path);
+                os.rmdir(self.path)
 
     def children(self):
         """
@@ -111,13 +113,13 @@ class Path:
         """
         try:
             for file in sorted(os.listdir(self.path)):
-                yield Path(self.app, os.path.join(self.path, file));
+                yield Path(self.app, os.path.join(self.path, file))
         except OSError:
-            return;
-        return;
-    
+            return
+        return
+
     def parent(self):
-        return Path(self.app, os.path.dirname(self.path));
+        return Path(self.app, os.path.dirname(self.path))
 
     def walk(self, test):
         """
@@ -127,29 +129,32 @@ class Path:
         Yields them for simplification.
         """
         if self.isfile():
-            yield self;
+            yield self
         elif self.isdir():
             for child in self.children():
                 for c in child.walk(test):
-                    yield c;
+                    yield c
                 else:
-                    yield child;
-        return;
+                    yield child
+        return
+
     # the following are only helpful in musync
     def inroot(self):
         if not self.isroot() and self.path.startswith(self.app.lambdaenv.root):
-            return True;
-        return False;
+            return True
+        return False
+
     def isroot(self):
         if self.path == self.app.lambdaenv.root:
-            return True;
-        return False;
+            return True
+        return False
+
     def relativepath(self):
         """
         Get the relative path in root, this is useful since the root directory might be very long
         which could result in unecessary lengths in strings.
         """
         if not self.inroot():
-            return False;
-        
-        return os.path.relpath(self.path, self.app.lambdaenv.root);
+            return False
+
+        return os.path.relpath(self.path, self.app.lambdaenv.root)
