@@ -55,7 +55,6 @@ def op_add(app, source):
     @param source Path object to file being added.
     """
 
-    print('in add')
     if source.isdir():
         app.printer.notice("ignoring directory:", source.path)
         return
