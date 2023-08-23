@@ -55,6 +55,7 @@ def op_add(app, source):
     @param source Path object to file being added.
     """
 
+    print('in add')
     if source.isdir():
         app.printer.notice("ignoring directory:", source.path)
         return
@@ -319,9 +320,9 @@ def op_inspect(app, source):
 def print_if_verbose(app, if_pretend: str, if_real: str):
     if app.lambdaenv.verbose:
         if app.lambdaenv.pretend:
-            app.printer.boldnotice("# Pretending to remove files...")
+            app.printer.boldnotice(f"# {if_pretend} files...")
         else:
-            app.printer.boldnotice("# Removing files...")
+            app.printer.boldnotice(f"# {if_real} files...")
 
 
 def main(app):
