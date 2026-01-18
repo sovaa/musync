@@ -46,6 +46,14 @@ Copy the following files to **/etc**
 
     sudo cp share/musync.rules share/musync.conf /etc/
 
+For Korean romanization support:
+
+    pip install korean_romanizer
+
+For Japanese romanization support:
+
+    pip install pykakasi
+
 Taking it for a spin
 --------------------
 

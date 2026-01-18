@@ -13,6 +13,21 @@ import os
 import sys
 import logging
 
+# TODO
+CN_CONVERT = lambda x: x
+
+try:
+    import pykakasi
+    JP_CONVERT = lambda x: ' '.join([t.get('hepburn', '') for t in pykakasi.kakasi().convert(x)])
+except ImportError:
+    JP_CONVERT = lambda x: x
+
+try:
+    from korean_romanizer.romanizer import Romanizer
+    KR_CONVERT = lambda x: Romanizer(x).romanize()
+except ImportError:
+    KR_CONVERT = lambda x: x
+
 
 class CustomException(Exception):
     pass
@@ -109,6 +124,23 @@ def md5sum(target):
 
 
 @guardexecution
+def foreign(text):
+    if text is None:
+        return None
+
+    if type(text) != str:
+        d_text = str(text).deocde("utf-8")
+    else:
+        d_text = text
+
+    d_text = KR_CONVERT(d_text)  # run korean first; JP will remove korean if existing
+    d_text = JP_CONVERT(d_text)
+    d_text = CN_CONVERT(d_text)
+
+    return d_text
+
+
+@guardexecution
 def ue(text):
     """
     Do not allow _any_ unicode characters to pass by here.
@@ -117,7 +149,7 @@ def ue(text):
         return None
 
     if type(text) != str:
-        d_text = str(text).decode("utf-8")
+        d_text = str(text).deocde("utf-8")
     else:
         d_text = text
 
@@ -129,7 +161,7 @@ def ue(text):
         else:
             buildstr.append(c)
 
-    return "".join(buildstr).encode("ascii")
+    return "".join(buildstr)
 
 
 cached_books = dict()
