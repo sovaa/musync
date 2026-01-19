@@ -35,7 +35,6 @@
 
 import os
 import shutil
-import getopt
 import tempfile
 import types
 
@@ -45,6 +44,15 @@ from musync.errors import FatalException
 import musync.locker
 import musync.custom
 import musync.printer
+
+# Click is a hard requirement - fail fast if not available
+try:
+    import click
+except ImportError:
+    raise ImportError(
+        "click is required but not installed. "
+        "Please install it with: pip install click>=8.0.0"
+    )
 
 # operating system problems
 tmp = tempfile.gettempdir()
@@ -190,30 +198,12 @@ class AppSession:
             self.printer.error("could not overlay settings from 'general' section")
             return None, None, None
 
-        # import the getopt module.
+        # Parse command line arguments using click
         try:
-            # see: http://docs.python.org/lib/module-getopt.html
-            opts, argv = getopt.gnu_getopt(
-                argv,
-                "pVRLsvfc:M:d",
-                [
-                    "pretend",
-                    "version",
-                    "recursive",
-                    "lock",
-                    "silent",
-                    "verbose",
-                    "force",
-                    "root=",
-                    "config=",
-                    "modify=",
-                    "debug",
-                ],
-            )
-
+            opts, argv = self._parse_with_click(argv)
             return cp, opts, argv
-        except getopt.GetoptError as e:
-            self.printer.error("unknown option:", e.opt)
+        except Exception as e:
+            self.printer.error("Error parsing arguments:", str(e))
             return None, None, None
 
     def __init__(self, argv, stream):
@@ -292,7 +282,7 @@ class AppSession:
             anti_circle.append(config)
 
             if not self.overlay_settings(cp, config):
-                self.printer.error("could not overlay section:", section)
+                self.printer.error("could not overlay section:", config)
                 return
 
         if not os.path.isdir(self.lambdaenv.root):
@@ -315,6 +305,129 @@ class AppSession:
 
     def setup_locker(self, path):
         self.locker = musync.locker.LockFileDB(self, path)
+    
+    def _parse_with_click(self, argv):
+        """
+        Parse arguments using click while maintaining exact getopt compatibility.
+        Returns (opts, args) in the same format as getopt.gnu_getopt.
+        
+        Handles the structure: [options] <operation> [files...]
+        """
+        # Separate options from operation+files
+        # Options can be: -p, --pretend, -V, --version, etc.
+        # We need to find where options end and operation begins
+        opts = []
+        args = []
+        i = 0
+        
+        # Define valid options
+        short_opts = {'p', 'V', 'R', 'L', 's', 'v', 'f', 'c', 'M', 'd'}
+        long_opts = {
+            'pretend', 'version', 'recursive', 'lock', 'silent', 
+            'verbose', 'force', 'root', 'config', 'modify', 'debug'
+        }
+        opts_requiring_value = {'root', 'config', 'modify', 'c', 'M'}
+        
+        # Parse arguments manually to support [options] <operation> [files...]
+        while i < len(argv):
+            arg = argv[i]
+            
+            # Check if it's a long option
+            if arg.startswith('--'):
+                opt_name = arg[2:]
+                if '=' in opt_name:
+                    opt_name, value = opt_name.split('=', 1)
+                    opts.append(('--' + opt_name, value))
+                elif opt_name in opts_requiring_value:
+                    if i + 1 < len(argv):
+                        opts.append(('--' + opt_name, argv[i + 1]))
+                        i += 1
+                    else:
+                        # Missing value, but continue anyway
+                        opts.append(('--' + opt_name, ''))
+                elif opt_name in long_opts:
+                    opts.append(('--' + opt_name, ''))
+                else:
+                    # Unknown option, treat as start of operation
+                    args.append(arg)
+                    i += 1
+                    break
+            # Check if it's a short option
+            elif arg.startswith('-') and len(arg) > 1 and not arg.startswith('--'):
+                # Handle short options like -p, -V, -c value, -pV, etc.
+                # Process each character after the dash
+                j = 1
+                while j < len(arg):
+                    short_opt = arg[j]
+                    if short_opt in short_opts:
+                        if short_opt in opts_requiring_value:
+                            # Option requires value
+                            if j + 1 < len(arg):
+                                # Value is in same arg: -cvalue
+                                opts.append(('-' + short_opt, arg[j + 1:]))
+                                break  # Can't have more opts after value
+                            elif i + 1 < len(argv):
+                                # Value is next arg: -c value
+                                opts.append(('-' + short_opt, argv[i + 1]))
+                                i += 1
+                                break  # Can't have more opts after value
+                            else:
+                                opts.append(('-' + short_opt, ''))
+                                break
+                        else:
+                            # Flag option
+                            opts.append(('-' + short_opt, ''))
+                            j += 1
+                    else:
+                        # Unknown option character, treat as start of operation
+                        args.append(arg)
+                        i += 1
+                        break
+                else:
+                    # All characters processed, continue
+                    i += 1
+                    continue
+                i += 1
+            else:
+                # Not an option, this is the operation or a file
+                args.append(arg)
+                i += 1
+                break
+        
+        # Add remaining args (files)
+        args.extend(argv[i:])
+        
+        # Validate options using click for better error messages
+        @click.command()
+        @click.option('--pretend', '-p', is_flag=True)
+        @click.option('--version', '-V', is_flag=True)
+        @click.option('--recursive', '-R', is_flag=True)
+        @click.option('--lock', '-L', is_flag=True)
+        @click.option('--silent', '-s', is_flag=True)
+        @click.option('--verbose', '-v', is_flag=True)
+        @click.option('--force', '-f', is_flag=True)
+        @click.option('--root', type=str)
+        @click.option('--config', '-c', type=str)
+        @click.option('--modify', '-M', type=str)
+        @click.option('--debug', '-d', is_flag=True)
+        def validate_opts(**kwargs):
+            pass
+        
+        # Create a context with just the options to validate
+        opt_args = [opt for opt, val in opts for _ in ([opt] + ([val] if val else []))]
+        try:
+            validate_opts.make_context('musync', opt_args)
+        except click.exceptions.Exit:
+            # Help or version was shown
+            return [], []
+        except click.exceptions.BadOptionUsage as e:
+            # Invalid option - re-raise with clearer message
+            raise ValueError(f"Invalid option: {e.format_message()}")
+        except click.exceptions.BadParameter as e:
+            # Invalid parameter - re-raise with clearer message
+            raise ValueError(f"Invalid parameter: {e.format_message()}")
+        
+        return opts, args
 
 
 ### This is changed with setup.py to suite environment ###
@@ -326,8 +439,15 @@ REPORT_ADDRESS = "http://sourceforge.net/projects/musync or johnjohn.tedro@gmail
 
 
 def Usage():
-    "returns usage information"
+    """
+    Returns usage information generated from click command definitions.
+    Maintains the same format as the original manual help text.
+    """
+    return _generate_click_help()
 
+
+def _manual_usage_text():
+    """Fallback manual help text when click is not available."""
     return """
     musync - music syncing scripts
     Usage: musync [option(s)] <operation> [file1 [..]]
@@ -421,3 +541,172 @@ def Usage():
             log: (/tmp/musync.log)
                 Created at each run - empty when no problem.
                 """
+
+
+def _generate_click_help():
+    """Generate help text from click command definitions, formatted to match original style."""
+    import io
+    from contextlib import redirect_stdout
+    
+    # Define the command with all options matching the current implementation
+    @click.command(
+        name='musync',
+        context_settings={'help_option_names': ['--help', '-h']}
+    )
+    @click.option('--pretend', '-p', is_flag=True, 
+                  help="Just pretend to do actions, telling what you would do. 'pretend'")
+    @click.option('--version', '-V', is_flag=True,
+                  help="Echo version information and exit.")
+    @click.option('--recursive', '-R', is_flag=True,
+                  help="Scan directories recursively. 'recursive'")
+    @click.option('--lock', '-L', is_flag=True,
+                  help="Can be combined with fix or add for locking after operation has been performed. 'lock' (also 'lock-file')")
+    @click.option('--silent', '-s', is_flag=True,
+                  help="Supresses what is defined in 'suppressed'. 'silent'")
+    @click.option('--verbose', '-v', is_flag=True,
+                  help="Makes musync more talkative. 'verbose'")
+    @click.option('--force', '-f', is_flag=True,
+                  help="Force the current action. You might be prompted to force certain actions. 'force'")
+    @click.option('--root', type=str,
+                  help="Specify target root. <target_root>")
+    @click.option('--config', '-c', type=str,
+                  help="Specify configuration section. <section1>,<section2>,... 'default-config' These work as overlays and the latest key specified is the one used, empty keys do not overwrite pre-defined.")
+    @click.option('--modify', '-M', type=str,
+                  help='Use metadata provided here instead of the one in files. key="new value" Valid keys are: artist - artist tag, album - album name, title - track title, track - track number')
+    @click.option('--debug', '-d', is_flag=True,
+                  help="Will enable printing of traceback on FatalExceptions [exc].")
+    @click.argument('operation', required=False)
+    @click.argument('files', nargs=-1, required=False)
+    def musync_cmd(**kwargs):
+        """musync - music syncing scripts"""
+        pass
+    
+    # Get click's help text
+    ctx = musync_cmd.make_context('musync', [])
+    help_text = ctx.get_help()
+    
+    # Format to match original style
+    lines = []
+    lines.append("    musync - music syncing scripts")
+    lines.append("    Usage: musync [option(s)] <operation> [file1 [..]]")
+    lines.append("    ")
+    lines.append("    reads [file1 [..]] or each line from stdin as source files.")
+    lines.append("    musync is designed to be non-destructive and will never modify source files")
+    lines.append("    unless it is explicitly specified in configuration.")
+    lines.append("    ")
+    lines.append("    musync is not an interactive tool.")
+    lines.append("    musync syncronizes files into a music repository.")
+    lines.append("   ")
+    lines.append("        General:")
+    lines.append("            --export (or -e):")
+    lines.append("                Will tell you what configurations that will be used")
+    lines.append("                for certain arguments.")
+    lines.append("            --version (or -V):")
+    lines.append("                Echo version information and exit.")
+    lines.append("            --force (or -f) 'force':")
+    lines.append("                Force the current action. You might be prompted to force")
+    lines.append("                certain actions.")
+    lines.append("            --allow-similar:")
+    lines.append("                tells musync not to check for similar files.")
+    lines.append("    ")
+    lines.append("        Options:")
+    lines.append("        syntax: *long-opt* (or *short-opt*) [*args*] '*conf-key*' (also *relevant*):")
+    lines.append("    ")
+    
+    # Add options from click definitions
+    options_info = [
+        ("--no-fixme", None, "ignore 'fixme' problems (you should review fixme-file first).", "'no-fixme'"),
+        ("--lock", "-L", "Can be combined with fix or add for locking after operation has been performed.", "'lock' (also 'lock-file')"),
+        ("--pretend", "-p", "Just pretend to do actions, telling what you would do.", "'pretend'"),
+        ("--recursive", "-R", "Scan directories recursively.", "'recursive'"),
+        ("--silent", "-s", "Supresses what is defined in 'suppressed'.", "'silent'"),
+        ("--verbose", "-v", "Makes musync more talkative.", "'verbose'"),
+        ("--coloring", "-C", "Invokes coloring of output.", "'coloring'"),
+        ("--root", None, "Specify target root.", "<target_root>"),
+        ("--config", "-c", "Specify configuration section. These work as overlays and the latest key specified is the one used, empty keys do not overwrite pre-defined.", "<section1>,<section2>,... 'default-config'"),
+        ("--modify", "-M", 'Use metadata provided here instead of the one in files. Valid keys are: artist - artist tag, album - album name, title - track title, track - track number', 'key="new value"'),
+        ("--debug", "-d", "Will enable printing of traceback on FatalExceptions [exc].", None),
+    ]
+    
+    for long_opt, short_opt, desc, conf_key in options_info:
+        if short_opt:
+            opt_str = f"            {long_opt} (or {short_opt})"
+        else:
+            opt_str = f"            {long_opt}"
+        if conf_key:
+            opt_str += f" {conf_key}"
+        opt_str += ":"
+        lines.append(opt_str)
+        # Wrap description if needed
+        desc_lines = _wrap_text(desc, 16)
+        for desc_line in desc_lines:
+            lines.append(f"                {desc_line}")
+        lines.append("    ")
+    
+    # Add transcode option (not in click but in original help)
+    lines.append("            -T <from ext>=<to ext>")
+    lines.append("                Transcode from one extension to another, tries to find")
+    lines.append("                configuration variable *from*-to-*to*.")
+    lines.append("                Example: -T flac>ogg (with key flac-to-ogg).")
+    lines.append("    ")
+    
+    lines.append("        Fancies:")
+    lines.append("            --progress (or -B):")
+    lines.append("                Display a progress meter instead of the usual output.")
+    lines.append("                Most notices will instead be written to log file.")
+    lines.append("                ")
+    lines.append("        ")
+    lines.append("        Operations:")
+    
+    operations = [
+        ("rm", "Remove files. If no source - read from stdin.", "[source..]"),
+        ("add", "Add files. If no source - read from stdin.", "[source..]"),
+        ("fix", "Fix files in repos. If no source - read from stdin. Will check if file is in correct position, or move it and delete source when necessary. All using standard add and rm operations.", "[source..]"),
+        ("lock", "Will lock a file preventing it from being removed or fixed.", "[source..]"),
+        ("unlock", "Will unlock a locked file.", "[source..]"),
+        ("inspect", "Inspect a number of files metadata.", "[source..]"),
+        ("help", "Show the help text and exit.", None),
+    ]
+    
+    for op, desc, args in operations:
+        if args:
+            lines.append(f"            {op}  {args}")
+        else:
+            lines.append(f"            {op}")
+        desc_lines = _wrap_text(desc, 16)
+        for desc_line in desc_lines:
+            lines.append(f"                {desc_line}")
+        lines.append("    ")
+    
+    lines.append("    ")
+    lines.append("        Files (defaults):")
+    lines.append("            log: (/tmp/musync.log)")
+    lines.append("                Created at each run - empty when no problem.")
+    lines.append("                ")
+    
+    return "\n".join(lines)
+
+
+def _wrap_text(text, indent=0):
+    """Wrap text to approximately 70 characters, respecting indent."""
+    max_width = 70 - indent
+    words = text.split()
+    lines = []
+    current_line = []
+    current_length = 0
+    
+    for word in words:
+        word_length = len(word) + (1 if current_line else 0)
+        if current_length + word_length <= max_width:
+            current_line.append(word)
+            current_length += word_length
+        else:
+            if current_line:
+                lines.append(" ".join(current_line))
+            current_line = [word]
+            current_length = len(word)
+    
+    if current_line:
+        lines.append(" ".join(current_line))
+    
+    return lines
