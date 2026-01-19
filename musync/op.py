@@ -113,6 +113,21 @@ def readpaths(app, path, inroot):
     if inroot:
         path = app.lambdaenv.root + "/" + path
 
+    # Strip trailing forward or backward slashes, but preserve root paths
+    # (e.g., keep "C:\" or "/" as-is)
+    # This is important because paths with trailing slashes can cause issues
+    # on Windows when checking if a path is a directory
+    if path and path not in ('/', '\\'):
+        # Check if it's a Windows root path (e.g., "C:\" or "C:/")
+        # Windows root paths are exactly 3 characters: drive letter, colon, and slash
+        is_windows_root = len(path) == 3 and path[1] == ':' and path[2] in ('/', '\\')
+        # Check if it's a Unix root path
+        is_unix_root = path == '/'
+        
+        if not (is_windows_root or is_unix_root):
+            # Strip trailing slashes - this is crucial for Windows paths with trailing backslashes
+            path = path.rstrip('/\\')
+
     p = musync.commons.Path(app, path)
 
     if p.isfile():

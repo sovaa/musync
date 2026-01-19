@@ -397,6 +397,43 @@ class AppSession:
         # Add remaining args (files)
         args.extend(argv[i:])
         
+        # Fix PowerShell quoting issues: when a path ends with a backslash before a quote,
+        # PowerShell treats it as escaping the quote, causing the quote and next args to be included.
+        # Example: "T:\path\" becomes T:\path" --pretend (all as one argument)
+        # We need to detect and fix this by splitting malformed arguments
+        normalized_args = []
+        for arg in args:
+            # Check if arg contains a quote followed by space and an option (malformed by PowerShell)
+            # Pattern: path" --pretend (all in one arg)
+            if '"' in arg and ' --' in arg:
+                # Split on the quote+space+-- pattern
+                parts = arg.split('" --', 1)
+                if len(parts) == 2:
+                    path_part = parts[0].rstrip('\\')  # Remove trailing backslash if present
+                    option_part = '--' + parts[1]
+                    normalized_args.append(path_part)
+                    # The option part should be processed, but since we've already parsed options,
+                    # we'll just add it as a regular arg (it will be ignored or cause an error)
+                    # Actually, let's check if it's a known option and handle it
+                    opt_name = option_part[2:]  # Remove '--'
+                    if opt_name in long_opts:
+                        # It's a valid option - add it to opts if not already there
+                        if ('--' + opt_name, '') not in opts:
+                            opts.append(('--' + opt_name, ''))
+                    else:
+                        # Unknown option, add as arg (will likely cause an error)
+                        normalized_args.append(option_part)
+                else:
+                    normalized_args.append(arg)
+            # Check if arg ends with just a quote (simple case)
+            elif arg.endswith('"') and len(arg) > 1:
+                # Strip the trailing quote
+                normalized_args.append(arg.rstrip('"').rstrip('\\'))
+            else:
+                normalized_args.append(arg)
+        
+        args = normalized_args
+        
         # Validate options using click for better error messages
         @click.command()
         @click.option('--pretend', '-p', is_flag=True)
