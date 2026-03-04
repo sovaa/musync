@@ -1,0 +1,228 @@
+stages:
+  - docs
+  - build
+  - test
+  - deploy
+
+variables:
+  TAG_LATEST: $DOCKER_REGISTRY/library/meta-search:latest
+  PYTHON_VERSION: "3.12"
+
+# update the handbook repo
+build docs:
+  tags:
+    - thin-runner
+  variables:
+    # don't need to clone the repo for this stage
+    GIT_STRATEGY: none
+  stage: docs
+  script:
+    - >
+      cd /usr/local/tncdata/source/handbook &&
+      git clean --force -d -x &&
+      git reset --hard &&
+      git checkout master &&
+      git fetch &&
+      git pull &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/index.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/README.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/integration.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/integration.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/conversation_api.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/conversation_api.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/compression.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/compression.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/explainability.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/explainability.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/intent_parsing.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/intent_parsing.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/memory_api.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/memory_api.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/preferences_api.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/preferences_api.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/ranking.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/ranking.md &&
+      wget -O /usr/local/tncdata/source/handbook/docs/meta-search/retrieval.md http://gitlab.thenetcircle.lab/tnc-service-team/meta-search/-/raw/main/docs/retrieval.md &&
+      cd /usr/local/tncdata/source/handbook &&
+      git add docs/meta-search &&
+      (git diff --quiet && git diff --staged --quiet || git commit -m 'updated meta-search docs') &&
+      git push
+
+
+build:
+  image: $DOCKER_REGISTRY/dockerhub-replica/docker:20.10.12
+  stage: build
+  services:
+    - name: $DOCKER_REGISTRY/dockerhub-replica/docker:dind-insecure
+      alias: docker
+  tags:
+    - docker
+  script:
+    - docker info
+    - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin $DOCKER_REGISTRY
+    - DOCKER_BUILDKIT=0 docker build -f Dockerfile -t $TAG_LATEST .
+    - docker push $TAG_LATEST
+
+
+# Lint stage
+lint:
+  when: on_success
+  needs: [build]
+  image: $DOCKER_REGISTRY/dockerhub-replica/docker:20.10.12
+  stage: test
+  variables:
+    # don't need to clone the repo for this stage
+    GIT_STRATEGY: none
+  environment:
+    name: lab
+    deployment_tier: testing
+  services:
+    - name: $DOCKER_REGISTRY/dockerhub-replica/docker:dind-insecure
+      alias: docker
+  tags:
+    - docker
+  script:
+    - docker container rm -f meta-search-test || true
+    - docker pull $TAG_LATEST
+    - |
+      docker run --name meta-search-test -w /app/ -e META_SEARCH_ENVIRONMENT=test $TAG_LATEST sh -lc '
+        uv run ruff check src/ tests/ &&
+        uv run black --check src/ tests/
+      '
+  allow_failure: true  # Linting failures don't block pipeline
+
+
+typecheck:
+  when: on_success
+  needs: [build]
+  image: $DOCKER_REGISTRY/dockerhub-replica/docker:20.10.12
+  stage: test
+  variables:
+    # don't need to clone the repo for this stage
+    GIT_STRATEGY: none
+  environment:
+    name: lab
+    deployment_tier: testing
+  services:
+    - name: $DOCKER_REGISTRY/dockerhub-replica/docker:dind-insecure
+      alias: docker
+  tags:
+    - docker
+  script:
+    - docker container rm -f meta-search-typecheck || true
+    - docker pull $TAG_LATEST
+    - |
+      docker run --name meta-search-typecheck -w /app/ -e META_SEARCH_ENVIRONMENT=test $TAG_LATEST sh -lc '
+        uv run ty check src/
+      '
+  allow_failure: true
+
+
+coverage:
+  when: on_success
+  needs: [build]
+  image: $DOCKER_REGISTRY/dockerhub-replica/docker:20.10.12
+  stage: test
+  variables:
+    # don't need to clone the repo for this stage
+    GIT_STRATEGY: none
+  environment:
+    name: lab
+    deployment_tier: testing
+  services:
+    - name: $DOCKER_REGISTRY/dockerhub-replica/docker:dind-insecure
+      alias: docker
+  tags:
+    - docker
+  script:
+    - docker container rm -f meta-search-test || true
+    - docker pull $TAG_LATEST
+    - |
+      docker run --name meta-search-test -w /app/ -e META_SEARCH_ENVIRONMENT=test $TAG_LATEST sh -lc '
+        uv run coverage run -m pytest
+        uv run coverage report -m || true
+        uv run coverage xml -o /app/coverage.xml || true
+        exit 0
+      '
+    # copy the generated cobertura XML out of the container for SonarQube analysis (will only be analyzed on main branch)
+    - docker cp meta-search-test:/app/coverage.xml .
+    - sed -i "s|<source>.*</source>|<source>$CI_PROJECT_DIR/src</source>|" coverage.xml
+    - grep source coverage.xml || true
+    - docker container rm -f meta-search-test || true
+  artifacts:
+    # expose the artifact for the next stage
+    paths:
+      - coverage.xml
+    expire_in: 1 hour
+    when: 
+      always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+  coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
+  allow_failure: true
+
+
+sonarqube-check:
+  image:
+    name: $DOCKER_REGISTRY/dockerhub-replica/sonar-scanner-cli:with-proxy
+    entrypoint: [""]
+  stage: test
+  only:
+    - main
+  needs:
+    - job: coverage
+      artifacts: true
+  tags:
+    - docker
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    # will run the nginx reverse proxy the `:with-proxy` image to avoid self-signed certificate issues
+    - sonar-scanner
+  allow_failure: true
+
+
+# deploy from inside an alpine docker container, to make sure we don't fail
+# because of changes to the runner machine
+deploy:
+  image: $DOCKER_REGISTRY/dockerhub-replica/alpine:latest
+  stage: deploy
+  when: on_success
+  variables:
+    # don't need to clone the repo for this stage
+    GIT_STRATEGY: none
+  only:
+    - main
+  tags:
+    - docker
+  # SERVER_USER/IP is defined in GitLab as CI/CD variables, one for each
+  # environment (only lab currently) and is for now gitlab@fat; ID_RSA
+  # is a generated private key for the gitlab user on fat, also a CI/CD
+  # variable
+  #
+  # also use the chinese mirror, otherwise apk will sometimes time out,
+  # breaking the build
+  script:
+    - chmod og= $ID_RSA
+
+    - echo http://mirrors.bfsu.edu.cn/alpine/v3.15/main > /etc/apk/repositories; 
+      echo http://mirrors.bfsu.edu.cn/alpine/v3.15/community >> /etc/apk/repositories
+
+    - apk update && apk add openssh
+
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP 
+      "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin $DOCKER_REGISTRY"
+
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP 
+      "docker pull $TAG_LATEST"
+
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP 
+      "docker container rm -f meta-search || true"
+
+    - ssh -i $ID_RSA -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP 
+      "docker run -d -p 8200:8000 --name meta-search
+          -e META_SEARCH_ENVIRONMENT=lab
+          -e LOG_LEVEL=DEBUG
+          -e BASE_URL=/metasearch
+          --restart unless-stopped
+          --log-opt max-size=50m
+          --log-opt max-file=1
+          $TAG_LATEST"

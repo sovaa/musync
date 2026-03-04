@@ -1,4 +1,4 @@
-﻿#
+#
 # Musync opts - read global settings and keep track of them.
 #
 # a common line seen in most musync modules:
@@ -394,45 +394,81 @@ class AppSession:
                 i += 1
                 break
         
-        # Add remaining args (files)
-        args.extend(argv[i:])
-        
-        # Fix PowerShell quoting issues: when a path ends with a backslash before a quote,
-        # PowerShell treats it as escaping the quote, causing the quote and next args to be included.
-        # Example: "T:\path\" becomes T:\path" --pretend (all as one argument)
-        # We need to detect and fix this by splitting malformed arguments
-        normalized_args = []
-        for arg in args:
-            # Check if arg contains a quote followed by space and an option (malformed by PowerShell)
-            # Pattern: path" --pretend (all in one arg)
+        # Continue parsing remaining args (operation + files), but still
+        # recognize options interspersed with file arguments (GNU getopt style).
+        # Also fix PowerShell quoting: when a path has a trailing backslash
+        # before a closing quote (e.g. "path\"), PowerShell treats it as
+        # escaping the quote, merging the path and subsequent args into one
+        # (e.g. 'path" --pretend' as a single argument).
+        while i < len(argv):
+            arg = argv[i]
+            
+            # Fix PowerShell backslash-quote merging:
+            # detect an arg containing '" --' which indicates merged tokens
             if '"' in arg and ' --' in arg:
-                # Split on the quote+space+-- pattern
                 parts = arg.split('" --', 1)
                 if len(parts) == 2:
-                    path_part = parts[0].rstrip('\\')  # Remove trailing backslash if present
-                    option_part = '--' + parts[1]
-                    normalized_args.append(path_part)
-                    # The option part should be processed, but since we've already parsed options,
-                    # we'll just add it as a regular arg (it will be ignored or cause an error)
-                    # Actually, let's check if it's a known option and handle it
-                    opt_name = option_part[2:]  # Remove '--'
-                    if opt_name in long_opts:
-                        # It's a valid option - add it to opts if not already there
-                        if ('--' + opt_name, '') not in opts:
-                            opts.append(('--' + opt_name, ''))
+                    path_part = parts[0].rstrip('\\/')
+                    opt_candidate = parts[1]
+                    args.append(path_part)
+                    # Handle the extracted option
+                    if opt_candidate in long_opts:
+                        opts.append(('--' + opt_candidate, ''))
+                    elif opt_candidate in opts_requiring_value and i + 1 < len(argv):
+                        opts.append(('--' + opt_candidate, argv[i + 1]))
+                        i += 1
                     else:
-                        # Unknown option, add as arg (will likely cause an error)
-                        normalized_args.append(option_part)
+                        args.append('--' + opt_candidate)
+                    i += 1
+                    continue
+            
+            # Fix PowerShell: arg ends with a stray quote (no space after)
+            if arg.endswith('"') and len(arg) > 1 and not arg.startswith('-'):
+                args.append(arg.rstrip('"').rstrip('\\/'))
+                i += 1
+                continue
+            
+            # Recognise long options after the operation
+            if arg.startswith('--'):
+                opt_name = arg[2:]
+                if '=' in opt_name:
+                    opt_name, value = opt_name.split('=', 1)
+                    opts.append(('--' + opt_name, value))
+                elif opt_name in opts_requiring_value:
+                    if i + 1 < len(argv):
+                        opts.append(('--' + opt_name, argv[i + 1]))
+                        i += 1
+                    else:
+                        opts.append(('--' + opt_name, ''))
+                elif opt_name in long_opts:
+                    opts.append(('--' + opt_name, ''))
                 else:
-                    normalized_args.append(arg)
-            # Check if arg ends with just a quote (simple case)
-            elif arg.endswith('"') and len(arg) > 1:
-                # Strip the trailing quote
-                normalized_args.append(arg.rstrip('"').rstrip('\\'))
+                    args.append(arg)
+            # Recognise short options after the operation
+            elif arg.startswith('-') and len(arg) > 1:
+                j = 1
+                while j < len(arg):
+                    short_opt = arg[j]
+                    if short_opt in short_opts:
+                        if short_opt in opts_requiring_value:
+                            if j + 1 < len(arg):
+                                opts.append(('-' + short_opt, arg[j + 1:]))
+                            elif i + 1 < len(argv):
+                                opts.append(('-' + short_opt, argv[i + 1]))
+                                i += 1
+                            else:
+                                opts.append(('-' + short_opt, ''))
+                            break
+                        else:
+                            opts.append(('-' + short_opt, ''))
+                            j += 1
+                    else:
+                        args.append(arg)
+                        break
             else:
-                normalized_args.append(arg)
-        
-        args = normalized_args
+                args.append(arg)
+            
+            i += 1
         
         # Validate options using click for better error messages
         @click.command()

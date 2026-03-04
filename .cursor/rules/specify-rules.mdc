@@ -1,0 +1,47 @@
+﻿# meta-search Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-01-20
+
+## Active Technologies
+- Python 3.12 (async-first design throughout, extends existing 001-meta-search and 002-conversational-agentic-search implementations) (003-preference-compression)
+- Python 3.12 (async-first design, consistent with existing codebase) (004-milvus-first-retrieval)
+- Python 3.12 + FastAPI, Pydantic v2, SQLAlchemy (async), Opik (observability) (001-explainable-ranking)
+- PostgreSQL (profiles), Milvus (vectors), Redis (caching) - N/A for this feature (read-only) (001-explainable-ranking)
+- Python 3.12 + FastAPI, SQLAlchemy 2.x (async), asyncpg, httpx, loguru, Alembic (005-geonames-local-cache)
+- PostgreSQL (existing instance, asyncpg driver) (005-geonames-local-cache)
+- Python >=3.12 + FastAPI >=0.104.0, SQLAlchemy[asyncio] >=2.0.23, asyncpg >=0.29.0, sse-starlette >=1.8.0, Pydantic >=2.5.0, LiteLLM >=1.20.0, uvicorn >=0.24.0 (006-split-stream-chunked-sse)
+- PostgreSQL (async via asyncpg + SQLAlchemy), Milvus (vector search) (006-split-stream-chunked-sse)
+- Python 3.12+ + FastAPI, DSPy (dspy-ai ≥2.4.0), LiteLLM (≥1.20.0), pymilvus 2.5.16, SQLAlchemy[asyncio], sse-starlette (007-search-pipeline-perf)
+- PostgreSQL (asyncpg), Milvus (vector search), Redis (caching) (007-search-pipeline-perf)
+- Python ≥3.12 + FastAPI ≥0.104, SQLAlchemy[asyncio] ≥2.0.23, asyncpg ≥0.29, Pydantic ≥2.5, DSPy ≥2.4, litellm ≥1.20, Redis ≥5.0, loguru ≥0.7.2 (008-scoped-memory-isolation)
+- PostgreSQL (via asyncpg), Milvus (vector search) (008-scoped-memory-isolation)
+- Python 3.12+ + FastAPI 0.104+, prometheus_client (new), litellm, dspy-ai, pymilvus, sqlalchemy[asyncio], sse-starlette (009-prometheus-observability)
+- PostgreSQL (via asyncpg/SQLAlchemy), Milvus (vector DB), Redis (available, minimal runtime use) (009-prometheus-observability)
+- Python 3.11+ + FastAPI, SQLAlchemy 2.0 (async), pymilvus, Pydantic v2, asyncpg (010-incremental-profile-ingestion)
+- PostgreSQL (profiles, profiles_review), Milvus (profile vectors) (010-incremental-profile-ingestion)
+
+- Python 3.12 (async-first design throughout) (001-meta-search)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+cd src; pytest; ruff check .
+
+## Code Style
+
+Python 3.12 (async-first design throughout): Follow standard conventions
+
+## Recent Changes
+- 010-incremental-profile-ingestion: Added Python 3.11+ + FastAPI, SQLAlchemy 2.0 (async), pymilvus, Pydantic v2, asyncpg
+- 009-prometheus-observability: Added Python 3.12+ + FastAPI 0.104+, prometheus_client (new), litellm, dspy-ai, pymilvus, sqlalchemy[asyncio], sse-starlette
+- 008-scoped-memory-isolation: Added Python ≥3.12 + FastAPI ≥0.104, SQLAlchemy[asyncio] ≥2.0.23, asyncpg ≥0.29, Pydantic ≥2.5, DSPy ≥2.4, litellm ≥1.20, Redis ≥5.0, loguru ≥0.7.2
+
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

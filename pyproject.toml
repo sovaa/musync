@@ -30,6 +30,8 @@ classifiers = [
 dependencies = [
     "mutagen>=1.30",
     "click>=8.0.0",
+    "pytest>=7.4.4",
+    "coverage>=7.2.7",
 ]
 
 [project.optional-dependencies]
@@ -83,3 +85,8 @@ dev-dependencies = [
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
 ]
+
+[[tool.uv.index]]
+name = "pypi-proxy"
+url = "http://stinkbox:5005/index/"
+default = true
