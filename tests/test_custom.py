@@ -9,6 +9,8 @@ from musync.custom import (
     system,
     execute,
     filter as custom_filter,
+    detect_scripts,
+    detect_language_bucket,
 )
 
 
@@ -244,3 +246,43 @@ def test_lexer_function(tmp_path):
     # This might fail if rulelexer is complex, but we can test the file check
     with pytest.raises(CustomException):
         lexer("/nonexistent/file.txt", "test")
+
+
+def test_detect_scripts_empty():
+    assert detect_scripts("") == set()
+    assert detect_scripts(None) == set()
+
+
+def test_detect_scripts_hangul():
+    assert detect_scripts("\uac00") == {"kr"}
+    assert "kr" in detect_scripts("\u1100")
+
+
+def test_detect_scripts_han():
+    assert detect_scripts("\u4e00") == {"han"}
+
+
+def test_detect_scripts_hiragana():
+    assert detect_scripts("\u3040") == {"jp"}
+
+
+def test_detect_language_bucket_empty():
+    assert detect_language_bucket("") == "other"
+    assert detect_language_bucket("ascii") == "other"
+
+
+def test_detect_language_bucket_kr():
+    assert detect_language_bucket("\uac00") == "kr"
+
+
+def test_detect_language_bucket_jp():
+    assert detect_language_bucket("\u3040") == "jp"
+
+
+def test_detect_language_bucket_cn():
+    assert detect_language_bucket("\u4e00") == "cn"
+
+
+def test_detect_language_bucket_mixed():
+    assert detect_language_bucket("\uac00\u3040") == "mixed"
+    assert detect_language_bucket("\u3040\uac00") == "mixed"

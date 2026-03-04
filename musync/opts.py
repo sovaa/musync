@@ -60,8 +60,8 @@ tmp = tempfile.gettempdir()
 
 
 class LambdaEnviron(dict):
-    def __init__(self, d=dict()):
-        dict.__init__(self, d)
+    def __init__(self, d=None):
+        dict.__init__(self, {} if d is None else d)
 
     def __setattr__(self, key, val):
         self.__setitem__(key, val)
@@ -179,7 +179,8 @@ class AppSession:
                 continue
 
             noconfig = False
-            cp.readfp(open(cfg))
+            with open(cfg, encoding="utf-8") as f:
+                cp.read_file(f)
 
         if noconfig:
             self.printer.error("no configuration files found!")
@@ -240,7 +241,8 @@ class AppSession:
             if opt in ("-p", "--pretend"):
                 self.lambdaenv.pretend = True
             elif opt in ("-V", "--version"):
-                print(version_str % version)
+                v = version
+                print(f"Musync, music syncronizer {v[0]}.{v[1]}.{v[2]}{v[3]}")
                 return None
             elif opt in ("-R", "--recursive"):
                 self.lambdaenv.recursive = True

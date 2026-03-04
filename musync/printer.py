@@ -151,8 +151,8 @@ class TermCaps:
     def _unicodeencode(self, s):
         if isinstance(s, str):
             return s.encode("utf-8")
-        elif isinstance(s, str):
-            return s
+        elif isinstance(s, bytes):
+            return s.decode("utf-8")
         else:
             return str(s)
 

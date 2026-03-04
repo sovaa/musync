@@ -114,18 +114,11 @@ def add(app, p, t):
             check = hash_get(app, t.path)
 
             if parity == check:
-                app.printer.notice(
-                    "      checkhash successful :-) {0} equals {1}".format(
-                        hashlib.md5(repr(parity).encode('utf-8')).hexdigest(),
-                        hashlib.md5(repr(check).encode('utf-8')).hexdigest()
-                    )
-                )
+                h1 = hashlib.md5(repr(parity).encode("utf-8")).hexdigest()
+                h2 = hashlib.md5(repr(check).encode("utf-8")).hexdigest()
+                app.printer.notice(f"      checkhash successful :-) {h1} equals {h2}")
             else:
-                app.printer.warning(
-                    "      checkhash failed :-/ {0} is not {1}".format(
-                        repr(parity), repr(check)
-                    )
-                )
+                app.printer.warning(f"      checkhash failed :-/ {repr(parity)} is not {repr(check)}")
                 attempts += 1
                 continue
         break
@@ -138,7 +131,7 @@ def remove(app, p, t):
 
     if t.path == p.path and not app.lambdaenv.force:
         app.printer.warning(
-            "target is same as source  (use --force if you really wan't to do this)"
+            "target is same as source  (use --force if you really want to do this)"
         )
         return
 

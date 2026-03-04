@@ -227,7 +227,7 @@ def ue(text):
 
     for c in d_text:
         if ord(c) > 127:
-            buildstr.append("{0}".format(hex(ord(c))[2:].upper()))
+            buildstr.append(f"{ord(c):02X}")
         else:
             buildstr.append(c)
 

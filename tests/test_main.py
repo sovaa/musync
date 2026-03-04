@@ -13,7 +13,7 @@ def test_print_if_verbose_pretend(mock_app):
     mock_app.lambdaenv.pretend = True
     
     musync.print_if_verbose(mock_app, "Pretending to add", "Adding")
-    assert mock_app.printer.boldnotice.called
+    mock_app.printer.boldnotice.assert_called_once()
 
 
 def test_print_if_verbose_real(mock_app):
@@ -22,7 +22,7 @@ def test_print_if_verbose_real(mock_app):
     mock_app.lambdaenv.pretend = False
     
     musync.print_if_verbose(mock_app, "Pretending to add", "Adding")
-    assert mock_app.printer.boldnotice.called
+    mock_app.printer.boldnotice.assert_called_once()
 
 
 def test_print_if_verbose_not_verbose(mock_app):
@@ -122,8 +122,8 @@ def test_entrypoint_not_configured(mock_app_session, mock_exit):
     mock_app_session.return_value = mock_app
     
     musync.entrypoint()
-    # The actual exit code might be different, just check that exit was called
-    assert mock_exit.called
+    mock_exit.assert_called()
+    assert mock_exit.call_count >= 1
 
 
 @patch("sys.exit")

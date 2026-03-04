@@ -153,15 +153,101 @@ def test_app_printer_suppress_all(mock_app):
     
     mock_app.configured = True
     mock_app.lambdaenv.silent = True
-    # The code checks if type.lower() in suppressed, and also checks for "all"
-    # Looking at warning/error/notice methods, they check is_suppressed("warning") or is_suppressed("all")
     mock_app.lambdaenv.suppressed = ["all"]
-    # The is_suppressed method itself doesn't handle "all" specially,
-    # but the individual methods (warning, error, notice) check for both the type and "all"
-    # So we test that "all" in suppressed works when checked directly
     assert printer.is_suppressed("all")
-    # And that individual types work when in the list
     mock_app.lambdaenv.suppressed = ["warning", "error", "notice"]
     assert printer.is_suppressed("warning")
     assert printer.is_suppressed("error")
     assert printer.is_suppressed("notice")
+
+
+def test_termcaps_setstream():
+    """TermCaps.setstream() updates the stream."""
+    stream1 = io.StringIO()
+    stream2 = io.StringIO()
+    termcaps = TermCaps.__new__(TermCaps)
+    termcaps.stream = stream1
+    termcaps.tc = False
+    termcaps.c = TermCapHolder()
+    termcaps.col = {}
+    termcaps.setstream(stream2)
+    assert termcaps.stream is stream2
+
+
+def test_termcaps_write_writes_to_stream():
+    """TermCaps._write() formats and writes to stream."""
+    stream = io.StringIO()
+    termcaps = TermCaps.__new__(TermCaps)
+    termcaps.stream = stream
+    termcaps.tc = False
+    termcaps.c = TermCapHolder()
+    termcaps.col = {"bold": ""}
+    termcaps._write("{bold}hi")
+    assert "hi" in stream.getvalue()
+
+
+def test_termcaps_writeall_joins_and_writes():
+    """TermCaps._writeall() joins args and writes to stream."""
+    stream = io.StringIO()
+    termcaps = TermCaps.__new__(TermCaps)
+    termcaps.stream = stream
+    termcaps._writeall("a", "b", "c")
+    assert stream.getvalue() == "abc"
+
+
+def test_termcaps_unicodeencode_str_returns_utf8_bytes():
+    """TermCaps._unicodeencode(str) returns UTF-8 encoded bytes."""
+    termcaps = TermCaps.__new__(TermCaps)
+    termcaps.stream = io.StringIO()
+    termcaps.c = TermCapHolder()
+    termcaps.col = {}
+    result = termcaps._unicodeencode("café")
+    assert result == "café".encode("utf-8")
+
+
+def test_termcaps_unicodeencode_bytes():
+    """TermCaps._unicodeencode(bytes) decodes to str."""
+    termcaps = TermCaps.__new__(TermCaps)
+    termcaps.stream = io.StringIO()
+    termcaps.c = TermCapHolder()
+    termcaps.col = {}
+    result = termcaps._unicodeencode(b"hello")
+    assert result == "hello"
+
+
+def test_app_printer_warning_suppressed_no_output(mock_app):
+    """AppPrinter.warning() does not write when suppressed."""
+    stream = io.StringIO()
+    printer = _create_printer(mock_app, stream)
+    mock_app.configured = True
+    mock_app.lambdaenv.silent = True
+    mock_app.lambdaenv.suppressed = ["warning"]
+    printer.warning("must not appear")
+    assert "must not appear" not in stream.getvalue()
+
+
+def test_app_printer_focus_boldnotice_on_artist_change(mock_app):
+    """AppPrinter.focus() calls boldnotice when artist or album changes."""
+    stream = io.StringIO()
+    printer = _create_printer(mock_app, stream)
+    mock_app.lambdaenv.suppressed = []
+    meta1 = Mock()
+    meta1.artist = "Artist A"
+    meta1.album = "Album 1"
+    meta1.title = "Title"
+    meta1.track = "1"
+    printer.focus(meta1)
+    assert printer.focused["artist"] == "Artist A"
+    assert printer.focused["album"] == "Album 1"
+    out1 = stream.getvalue()
+    meta2 = Mock()
+    meta2.artist = "Artist B"
+    meta2.album = "Album 2"
+    meta2.title = "Title 2"
+    meta2.track = "2"
+    printer.focus(meta2)
+    assert printer.focused["artist"] == "Artist B"
+    assert printer.focused["album"] == "Album 2"
+    out2 = stream.getvalue()
+    assert len(out2) > len(out1)
+    assert "Artist B" in out2 or "Album 2" in out2

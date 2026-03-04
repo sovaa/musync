@@ -24,11 +24,11 @@
 import musync.op
 
 
-def print_hint(text):
-    print("HINT: %s" % (text))
+def print_hint(text: str) -> None:
+    print(f"HINT: {text}")
 
 
-def run(app):
+def run(app) -> None:
     # will never hint if silent
     if app.lambdaenv.silent:
         return

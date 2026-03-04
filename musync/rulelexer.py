@@ -4,9 +4,9 @@ import re
 
 
 class Reader:
-    def __init__(self, ignore=list()):
+    def __init__(self, ignore=None):
         self._current = None
-        self._ignore = ignore
+        self._ignore = [] if ignore is None else ignore
         self._pos = 0
         self._empty = False
 
@@ -80,13 +80,13 @@ class RuleLexer:
     unicodegroup_token = re.compile(r"^U?\+?([A-Fa-f0-9]+)-U?\+?([A-Fa-f0-9]+)$")
 
     def __init__(self):
-        self.tree = list()
-        self.errors = list()
+        self.tree = []
+        self.errors = []
         self._line = 0
 
     def lex(self, reader):
         while not reader.empty():
-            line = list()
+            line = []
 
             while next(reader) != "\n":
                 if reader.current() is None:
@@ -130,7 +130,7 @@ class RuleLexer:
 
         sep = reader.current()
 
-        rule = list()
+        rule = []
         while next(reader) != sep:
             if reader.current() is None:
                 return (
@@ -144,7 +144,7 @@ class RuleLexer:
 
         if command == self.UNICODE:
             groups = rule.split(",")
-            rule = list()
+            rule = []
 
             for i, group in enumerate(groups):
                 group = group.strip()
@@ -174,7 +174,7 @@ class RuleLexer:
             except Exception as e:
                 return (False, reader.pos(), "invalid syntax: " + str(e))
 
-        repl = list()
+        repl = []
         while next(reader) != sep:
             # implicit end
             if reader.current() is None:
@@ -191,9 +191,9 @@ class RuleBook:
         self.kw = kw
 
         self.lexer = lexer
-        self.charrules = list()
-        self.chardict = dict()
-        self.stringrules = list()
+        self.charrules = []
+        self.chardict = {}
+        self.stringrules = []
 
         def create_unicoderule(ruleset, to_c):
             res = dict()

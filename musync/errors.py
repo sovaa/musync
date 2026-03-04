@@ -18,10 +18,10 @@
 
 
 class WarningException(Exception):
-    def __init__(self, str):
-        Exception.__init__(self, str)
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
 
 
 class FatalException(Exception):
-    def __init__(self, str):
-        Exception.__init__(self, str)
+    def __init__(self, message: str) -> None:
+        super().__init__(message)

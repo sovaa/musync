@@ -3,3 +3,20 @@
 ### Added
 
 - **Fix (op_fix)**: When target path is a symlink, print a notice ("target is link - ...") instead of silently skipping.
+- **Tests**: New and extended tests for hints, dbman, rulelexer, formats, printer, opts; coverage raised to 80%+.
+
+### Changed
+
+- **Python**: Requires Python 3.12+ (dropped 3.7–3.11).
+- **opts**: Config parsing uses `RawConfigParser.read_file()` instead of deprecated `readfp()`.
+- **printer**: `_unicodeencode` now correctly handles `bytes` (decode to str).
+- **hints**: Use f-string for hint message.
+
+### Fixed
+
+- **opts**: Mutable default argument in `LambdaEnviron.__init__` (use `d=None`).
+- **rulelexer**: Mutable default argument in `Reader.__init__` (use `ignore=None`).
+
+### Added (Phase 2)
+
+- **errors, hints**: Type hints on public functions; `errors` uses `super().__init__` and no longer shadows builtin `str`.
