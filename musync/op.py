@@ -22,6 +22,11 @@
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import annotations
+
+from typing import Any, Callable, Generator
+
+from musync.commons import Path
 from musync.errors import FatalException, WarningException
 import musync.opts
 import musync.commons
@@ -37,7 +42,9 @@ handled_files = 0
 import io
 
 
-def operate(app, call, inroot=False):
+def operate(
+    app: Any, call: Callable[[Any, Path], None], inroot: bool = False
+) -> None:
     """
     Operation abstraction, this is the only function used by different operations.
     """
@@ -83,7 +90,9 @@ def operate(app, call, inroot=False):
 #    else:
 
 
-def readargs(app, args, inroot):
+def readargs(
+    app: Any, args: list[str], inroot: bool
+) -> Generator[Path, None, None]:
     """
     reads paths in different ways depending on number of arguments.
     yields the filepaths for easy access.
@@ -107,7 +116,9 @@ def readargs(app, args, inroot):
             args = args[1:]
 
 
-def readpaths(app, path, inroot):
+def readpaths(
+    app: Any, path: str, inroot: bool
+) -> Generator[Path, None, None]:
     """ """
     global handled_dirs, handled_files
     if inroot:

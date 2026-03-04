@@ -17,28 +17,32 @@
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import annotations
+
 import string
-import os.path
+from pathlib import Path as PathLib
+from typing import Any
+
+from musync.commons import Path
 
 
 class LockFileDB:
-    def __init__(self, app, lock_path):
+    def __init__(self, app: Any, lock_path: str) -> None:
         self.app = app
         self.changed = False
         self.removed = False
         self.lock_path = lock_path
 
-        if not os.path.isfile(self.lock_path):
-            f = open(self.lock_path, "w")
-            f.close()
+        if not PathLib(self.lock_path).is_file():
+            with open(self.lock_path, "w", encoding="utf-8") as f:
+                pass
 
-        f = open(self.lock_path, "r")
-        self.DB = [x.strip(string.whitespace) for x in f.readlines()]
-        f.close()
+        with open(self.lock_path, "r", encoding="utf-8") as f:
+            self.DB = [x.strip(string.whitespace) for x in f.readlines()]
 
         self.DB_NEWS = []
 
-    def unlock(self, path):
+    def unlock(self, path: Path) -> bool:
         if not self.islocked(path):
             self.app.notice("is not locked:", path.path)
             return False
@@ -51,7 +55,7 @@ class LockFileDB:
         self.changed = True
         self.removed = True
 
-    def lock(self, path):
+    def lock(self, path: Path) -> bool:
         if self.islocked(path):
             self.app.notice("is already locked:", path.path)
             return False
@@ -67,32 +71,24 @@ class LockFileDB:
         self.DB_NEWS.append(path.relativepath() + "\n")
         self.changed = True
 
-    def islocked(self, path):
-        if path.relativepath() in self.DB:
-            return True
-        else:
-            return False
+    def islocked(self, path: Path) -> bool:
+        return path.relativepath() in self.DB
 
-    def parentislocked(self, path):
-        if path.parent().relativepath() in self.DB:
-            return True
+    def parentislocked(self, path: Path) -> bool:
+        return path.parent().relativepath() in self.DB
 
-        return False
-
-    def stop(self):
+    def stop(self) -> None:
         if self.changed:
             # this will trigger writing if database has been changed.
-            if not os.path.isfile(self.lock_path):
-                f = open(self.lock_path, "w")
-                f.close()
+            if not PathLib(self.lock_path).is_file():
+                with open(self.lock_path, "w", encoding="utf-8") as f:
+                    pass
 
             if self.removed:
-                f = open(self.lock_path, "w")
-                for p in self.DB:
-                    f.writelines(p)
+                with open(self.lock_path, "w", encoding="utf-8") as f:
+                    for p in self.DB:
+                        f.writelines(p)
                     f.write("\n")
-                f.close()
             else:
-                f = open(self.lock_path, "a")
-                f.writelines(self.DB_NEWS)
-                f.close()
+                with open(self.lock_path, "a", encoding="utf-8") as f:
+                    f.writelines(self.DB_NEWS)

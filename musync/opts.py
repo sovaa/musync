@@ -37,6 +37,7 @@ import os
 import shutil
 import tempfile
 import types
+from pathlib import Path as PathLib
 
 from configparser import RawConfigParser
 from musync.errors import FatalException
@@ -85,7 +86,7 @@ LambdaTemplate = {
     "force": False,
     "root": None,
     "config": None,
-    "modify": dict(),
+    "modify": {},
     "debug": True,
     "configurations": [],
     "transcode": None,
@@ -170,12 +171,13 @@ class AppSession:
         noconfig = True
 
         configuration_files = [
-            os.path.expanduser(os.path.join(*cfgfile)) for cfgfile in cfgfiles
+            str(PathLib(os.path.join(*cfgfile)).expanduser())
+            for cfgfile in cfgfiles
         ]
 
         # not using readfiles since doesn't work under windows
         for cfg in configuration_files:
-            if not os.path.isfile(cfg):
+            if not PathLib(cfg).is_file():
                 continue
 
             noconfig = False
@@ -226,7 +228,7 @@ class AppSession:
 
         def parse_modify(self, base, arg):
             if base is None:
-                base = dict()
+                base = {}
 
             i = arg.find("=")
             if i <= 0:
@@ -237,35 +239,37 @@ class AppSession:
             return base
 
         for opt, arg in opts:
-            # loop through the arguments and do what we're supposed to do:
-            if opt in ("-p", "--pretend"):
-                self.lambdaenv.pretend = True
-            elif opt in ("-V", "--version"):
-                v = version
-                print(f"Musync, music syncronizer {v[0]}.{v[1]}.{v[2]}{v[3]}")
-                return None
-            elif opt in ("-R", "--recursive"):
-                self.lambdaenv.recursive = True
-            elif opt in ("-L", "--lock"):
-                self.lambdaenv.lock = True
-            elif opt in ("-s", "--silent"):
-                self.lambdaenv.silent = True
-            elif opt in ("-v", "--verbose"):
-                self.lambdaenv.verbose = True
-            elif opt in ("-f", "--force"):
-                self.lambdaenv.force = True
-            elif opt in ("-c", "--config"):
-                self.lambdaenv.configurations.extend(
-                    [a.strip() for a in arg.split(",")]
-                )
-            elif opt in ("-M", "--modify"):
-                self.lambdaenv.modify = parse_modify(self, self.lambdaenv.modify, arg)
-            elif opt in ("-d", "--debug"):
-                self.lambdaenv.debug = True
-            elif opt in ("--root"):
-                self.lambdaenv.root = arg
-            else:
-                self.printer.error("unkown option:", opt)
+            match opt:
+                case "-p" | "--pretend":
+                    self.lambdaenv.pretend = True
+                case "-V" | "--version":
+                    v = version
+                    print(f"Musync, music syncronizer {v[0]}.{v[1]}.{v[2]}{v[3]}")
+                    return None
+                case "-R" | "--recursive":
+                    self.lambdaenv.recursive = True
+                case "-L" | "--lock":
+                    self.lambdaenv.lock = True
+                case "-s" | "--silent":
+                    self.lambdaenv.silent = True
+                case "-v" | "--verbose":
+                    self.lambdaenv.verbose = True
+                case "-f" | "--force":
+                    self.lambdaenv.force = True
+                case "-c" | "--config":
+                    self.lambdaenv.configurations.extend(
+                        [a.strip() for a in arg.split(",")]
+                    )
+                case "-M" | "--modify":
+                    self.lambdaenv.modify = parse_modify(
+                        self, self.lambdaenv.modify, arg
+                    )
+                case "-d" | "--debug":
+                    self.lambdaenv.debug = True
+                case "--root":
+                    self.lambdaenv.root = arg
+                case _:
+                    self.printer.error("unkown option:", opt)
 
         #
         # Everytime default-config is set config must be rescanned.

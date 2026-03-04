@@ -1,16 +1,19 @@
 # -*- encoding: utf-8 -*-
 
+from __future__ import annotations
+
 import re
+from typing import Any
 
 
 class Reader:
-    def __init__(self, ignore=None):
+    def __init__(self, ignore: list[str] | None = None) -> None:
         self._current = None
         self._ignore = [] if ignore is None else ignore
         self._pos = 0
         self._empty = False
 
-    def __next__(self):
+    def __next__(self) -> str | None:
         if self.empty():
             return None
 
@@ -30,22 +33,22 @@ class Reader:
 
         return self._current
 
-    def empty(self):
+    def empty(self) -> bool:
         return self._empty
 
-    def pos(self):
+    def pos(self) -> int:
         return self._pos
 
-    def current(self):
+    def current(self) -> str | None:
         return self._current
 
 
 class StringReader(Reader):
-    def __init__(self, string, **kw):
+    def __init__(self, string: str, **kw: Any) -> None:
         Reader.__init__(self, **kw)
         self._iterstring = iter(string)
 
-    def _get_next(self):
+    def _get_next(self) -> str | None:
         try:
             return next(self._iterstring)
         except StopIteration:
@@ -53,11 +56,11 @@ class StringReader(Reader):
 
 
 class FileReader(Reader):
-    def __init__(self, fileobject, **kw):
+    def __init__(self, fileobject: Any, **kw: Any) -> None:
         Reader.__init__(self, **kw)
         self._fileobject = fileobject
 
-    def _get_next(self):
+    def _get_next(self) -> str | None:
         r = self._fileobject.read(1)
 
         if r is None or r == "":
@@ -79,12 +82,12 @@ class RuleLexer:
     unicode_token = re.compile(r"^U?\+?([A-Fa-f0-9]+)$")
     unicodegroup_token = re.compile(r"^U?\+?([A-Fa-f0-9]+)-U?\+?([A-Fa-f0-9]+)$")
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tree = []
         self.errors = []
         self._line = 0
 
-    def lex(self, reader):
+    def lex(self, reader: Reader) -> None:
         while not reader.empty():
             line = []
 
@@ -109,7 +112,9 @@ class RuleLexer:
             if not ok:
                 self.errors.append(((self._line, pos), message))
 
-    def lexrule(self, line=None):
+    def lexrule(
+        self, line: str | None = None
+    ) -> tuple[bool | None, int, str | None]:
         reader = StringReader(line)
 
         # check first character
@@ -187,7 +192,7 @@ class RuleLexer:
 
 
 class RuleBook:
-    def __init__(self, lexer, **kw):
+    def __init__(self, lexer: RuleLexer, **kw: Any) -> None:
         self.kw = kw
 
         self.lexer = lexer
@@ -196,7 +201,7 @@ class RuleBook:
         self.stringrules = []
 
         def create_unicoderule(ruleset, to_c):
-            res = dict()
+            res = {}
             for rule in ruleset:
                 if type(rule) == int:
                     res[rule] = to_c
@@ -212,8 +217,8 @@ class RuleBook:
             elif rule[0] == RuleLexer.UNICODE:
                 self.chardict.update(create_unicoderule(rule[1], rule[2]))
 
-    def match(self, string):
-        res = list()
+    def match(self, string: str) -> list[str]:
+        res = []
 
         for c in string:
             res.append(self.chardict.get(ord(c), c))
@@ -254,7 +259,8 @@ r/_/_/
     print(lexer2.errors)
 
     lexer3 = RuleLexer()
-    lexer3.lex(FileReader(open("test.txt", "r")))
+    with open("test.txt", "r", encoding="utf-8") as f:
+        lexer3.lex(FileReader(f))
 
     rulebook = RuleBook(lexer3)
     print(rulebook.match("testeGÅ"))

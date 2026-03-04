@@ -23,7 +23,10 @@
 #    along with Musync.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import annotations
+
 import os
+from typing import Any, Generator
 
 import musync.formats
 
@@ -36,7 +39,7 @@ class Path:
     aid in simplifying the code at _many_ locations.
     """
 
-    def __init__(self, app, path, **kw):
+    def __init__(self, app: Any, path: str, **kw: Any) -> None:
         """
         initiate variables.
         """
@@ -67,7 +70,7 @@ class Path:
         if self.isfile():
             self.meta = musync.formats.open(self.path, **self.app.lambdaenv.modify)
 
-    def get_path(self):
+    def get_path(self) -> str:
         if self.ext:
             return os.path.join(self.dir, self.basename) + "." + self.ext
         else:
@@ -75,36 +78,36 @@ class Path:
 
     path = property(get_path)
 
-    def isfile(self):
+    def isfile(self) -> bool:
         return os.path.isfile(self.path)
 
-    def isdir(self):
+    def isdir(self) -> bool:
         return os.path.isdir(self.path)
 
-    def islink(self):
+    def islink(self) -> bool:
         return os.path.islink(self.path)
 
-    def exists(self):
+    def exists(self) -> bool:
         return os.path.exists(self.path)
 
-    def isempty(self):
+    def isempty(self) -> bool:
         if self.isdir():
             if len(os.listdir(self.path)) > 0:
                 return False
         return True
 
-    def basename(self):
+    def basename(self) -> str:
         return os.path.basename(self.path)
 
-    def dirname(self):
+    def dirname(self) -> str:
         return os.path.dirname(self.path)
 
-    def rmdir(self):
+    def rmdir(self) -> None:
         if self.isdir():
             if self.isempty():
                 os.rmdir(self.path)
 
-    def children(self):
+    def children(self) -> Generator[Path, None, None]:
         """
         this will yield all the children of a directory,
         making them accessable trough a "for foo in bar.children():"
@@ -118,10 +121,10 @@ class Path:
             return
         return
 
-    def parent(self):
+    def parent(self) -> Path:
         return Path(self.app, os.path.dirname(self.path))
 
-    def walk(self, test):
+    def walk(self, test: Any) -> Generator[Path, None, None]:
         """
         walks trough all paths that are beneath this path.
         this means a recursive walk trough all childrens and subchildren
@@ -139,17 +142,17 @@ class Path:
         return
 
     # the following are only helpful in musync
-    def inroot(self):
+    def inroot(self) -> bool:
         if not self.isroot() and self.path.startswith(self.app.lambdaenv.root):
             return True
         return False
 
-    def isroot(self):
+    def isroot(self) -> bool:
         if self.path == self.app.lambdaenv.root:
             return True
         return False
 
-    def relativepath(self):
+    def relativepath(self) -> str | bool:
         """
         Get the relative path in root, this is useful since the root directory might be very long
         which could result in unecessary lengths in strings.

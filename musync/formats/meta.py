@@ -1,10 +1,11 @@
 import os
+from typing import Any
 
 
 class MetaFile:
-    __translate__ = None
+    __translate__: Any = None
 
-    def __init__(self, f, tags):
+    def __init__(self, f: Any, tags: dict[str, list[Any]]) -> None:
         self.album = None
         self.artist = None
         self.title = None

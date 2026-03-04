@@ -223,7 +223,7 @@ def ue(text):
     else:
         d_text = text
 
-    buildstr = list()
+    buildstr = []
 
     for c in d_text:
         if ord(c) > 127:
@@ -234,7 +234,7 @@ def ue(text):
     return "".join(buildstr)
 
 
-cached_books = dict()
+cached_books = {}
 
 
 @guardexecution
@@ -248,7 +248,8 @@ def lexer(rb, string):
         return cached_books[rb].match(string)
 
     lexer = rulelexer.RuleLexer()
-    lexer.lex(rulelexer.FileReader(open(rb, "r")))
+    with open(rb, "r", encoding="utf-8") as f:
+        lexer.lex(rulelexer.FileReader(f))
 
     if len(lexer.errors) > 0:
         for error in lexer.errors:

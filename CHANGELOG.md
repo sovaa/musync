@@ -7,6 +7,7 @@
 
 ### Changed
 
+- **musync/**: Modernized for Python 3.12–3.13: f-strings, type hints, pathlib, context managers (`with open(...)`) for all file handling, match/case in opts, literal list/dict (`[]`/`{}`), and direct boolean returns in locker.
 - **Python**: Requires Python 3.12+ (dropped 3.7–3.11).
 - **opts**: Config parsing uses `RawConfigParser.read_file()` instead of deprecated `readfp()`.
 - **printer**: `_unicodeencode` now correctly handles `bytes` (decode to str).

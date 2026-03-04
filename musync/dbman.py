@@ -43,8 +43,12 @@ import os
 
 # Current artist and album in focus
 
+from typing import Any
 
-def build_target(app, source, **kw):
+from musync.commons import Path
+
+
+def build_target(app: Any, source: Any, **kw: Any) -> Path:
     """
     builds a target for many of the functions in musync.dbman
     this is just a complex concatenation of directories and
@@ -64,11 +68,11 @@ def build_target(app, source, **kw):
     )
 
 
-def hash_get(app, path):
+def hash_get(app: Any, path: str) -> Any:
     return app.lambdaenv.hash(path)
 
 
-def add(app, p, t):
+def add(app: Any, p: Path, t: Path) -> bool | None:
     "adds a file to the database"
 
     import hashlib
@@ -126,7 +130,7 @@ def add(app, p, t):
     return True
 
 
-def remove(app, p, t):
+def remove(app: Any, p: Path, t: Path) -> bool | None:
     "removes a file from the database"
 
     if t.path == p.path and not app.lambdaenv.force:

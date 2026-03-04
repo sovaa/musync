@@ -32,16 +32,16 @@ Interrupt = False
 Ret = INTERRUPT
 
 
-def ret():
+def ret() -> int:
     global Ret
     return Ret
 
 
-def setret(ret):
+def setret(ret: int) -> None:
     global Ret
     Ret = ret
 
 
-def interrupt_handler(sig):
+def interrupt_handler(sig: int) -> None:
     global Interrupt
     Interrupt = True
