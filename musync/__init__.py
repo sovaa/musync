@@ -392,8 +392,15 @@ except KeyboardInterrupt:
 
 # This block ensures that ^C interrupts are handled quietly.
 def entrypoint():
+    argv = sys.argv[1:]
+    # Handle --version / -V before loading config or creating the printer (avoids hang on Windows)
+    if "--version" in argv or "-V" in argv:
+        from musync.opts import version
+        print(f"Musync, music syncronizer {version[0]}.{version[1]}.{version[2]}{version[3]}")
+        sys.exit(0)
+
     try:
-        app = musync.opts.AppSession(sys.argv[1:], sys.stdout)
+        app = musync.opts.AppSession(argv, sys.stdout)
     except Exception as e:
         print(traceback.format_exc())
         sys.exit(1)

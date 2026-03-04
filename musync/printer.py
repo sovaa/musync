@@ -60,8 +60,6 @@ class TermCaps:
     focused = {"artist": None, "album": None, "track": None, "title": None}
 
     def __init__(self, stream):
-        import curses
-
         self.haslogged = False
         self.tc = True
         self.stream = stream
@@ -70,6 +68,20 @@ class TermCaps:
         self.setf = None
         self.col = {}
         self.c = TermCapHolder()
+
+        # Skip curses on Windows: setupterm/tigetstr can hang or use huge memory
+        if sys.platform == "win32":
+            self.blankcaps()
+            self.tc = False
+            return
+
+        try:
+            import curses
+        except (ImportError, ModuleNotFoundError):
+            # curses not available (e.g. minimal Python build)
+            self.blankcaps()
+            self.tc = False
+            return
 
         if not self.stream.isatty():
             self.blankcaps()
