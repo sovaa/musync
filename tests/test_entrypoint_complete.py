@@ -10,6 +10,7 @@ from musync.errors import FatalException
 @patch("musync.opts.AppSession")
 def test_entrypoint_general_exception(mock_app_session, mock_exit):
     """Test entrypoint() handling general Exception."""
+    mock_exit.side_effect = SystemExit
     mock_app = Mock()
     mock_app.configured = True
     mock_app.args = ["add", "test.txt"]
@@ -20,7 +21,8 @@ def test_entrypoint_general_exception(mock_app_session, mock_exit):
     mock_app_session.return_value = mock_app
     
     with patch("musync.main", side_effect=Exception("General error")):
-        entrypoint()
+        with pytest.raises(SystemExit):
+            entrypoint()
         mock_app.printer.error.assert_called()
         mock_exit.assert_called_with(1)
 
@@ -49,6 +51,7 @@ def test_entrypoint_with_debug(mock_app_session, mock_exit):
 @patch("musync.opts.AppSession")
 def test_entrypoint_systemexit(mock_app_session, mock_exit):
     """Test entrypoint() handling SystemExit."""
+    mock_exit.side_effect = SystemExit
     mock_app = Mock()
     mock_app.configured = True
     mock_app.args = ["add", "test.txt"]
@@ -59,8 +62,10 @@ def test_entrypoint_systemexit(mock_app_session, mock_exit):
     mock_app_session.return_value = mock_app
     
     with patch("musync.main", side_effect=SystemExit(2)):
-        entrypoint()
-        mock_exit.assert_called_with(2)
+        with pytest.raises(SystemExit):
+            entrypoint()
+        mock_exit.assert_called_once()
+        assert mock_exit.call_args[0][0].code == 2
 
 
 @patch("sys.exit")

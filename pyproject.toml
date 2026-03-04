@@ -35,8 +35,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-korean = ["korean_romanizer"]
-japanese = ["pykakasi"]
+jp = ["pykakasi>=2.2.1"]
+kr = ["korean-romanizer>=0.28.0"]
+zh = ["pypinyin>=0.55.0"]
+
+cjk = [
+  "pykakasi>=2.2.1",
+  "korean-romanizer>=0.28.0",
+  "pypinyin>=0.55.0"
+]
 
 [project.scripts]
 musync = "musync:entrypoint"

@@ -76,8 +76,8 @@ class RuleLexer:
 
     COMMANDS = [REGEXP, UNICODE]
 
-    unicode_token = re.compile("^U?\+?([A-Fa-f0-9]+)$")
-    unicodegroup_token = re.compile("^U?\+?([A-Fa-f0-9]+)-U?\+?([A-Fa-f0-9]+)$")
+    unicode_token = re.compile(r"^U?\+?([A-Fa-f0-9]+)$")
+    unicodegroup_token = re.compile(r"^U?\+?([A-Fa-f0-9]+)-U?\+?([A-Fa-f0-9]+)$")
 
     def __init__(self):
         self.tree = list()

@@ -32,7 +32,7 @@ Installation
 Musync requirements
 -------------------
 
-* At least Python 2.6
+* At least Python 3.6
 * Python mutagen >= 1.16 (http://pypi.python.org/pypi/mutagen/)
 
 Installation

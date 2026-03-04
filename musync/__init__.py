@@ -199,6 +199,10 @@ def op_fix(app, source):
             app.printer.notice("sane - " + t.relativepath())
             return
 
+        if t.islink():
+            app.printer.notice("target is link - " + t.relativepath())
+            return
+
         if not t.isfile() and not t.islink():
             if app.lambdaenv.pretend:
                 app.printer.action("would add insane file - " + s.relativepath())

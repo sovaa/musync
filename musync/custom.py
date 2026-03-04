@@ -12,13 +12,18 @@ import tempfile
 import os
 import sys
 import logging
+import unicodedata
 
-# TODO
-CN_CONVERT = lambda x: x
+try:
+    from pypinyin import lazy_pinyin  # no tones by default
+    CN_CONVERT = lambda x: " ".join(lazy_pinyin(x))
+except ImportError:
+    CN_CONVERT = lambda x: x
 
 try:
     import pykakasi
-    JP_CONVERT = lambda x: ' '.join([t.get('hepburn', '') for t in pykakasi.kakasi().convert(x)])
+    _kks = pykakasi.kakasi()
+    JP_CONVERT = lambda x: " ".join([t.get("hepburn", "") for t in _kks.convert(x)])
 except ImportError:
     JP_CONVERT = lambda x: x
 
@@ -27,6 +32,58 @@ try:
     KR_CONVERT = lambda x: Romanizer(x).romanize()
 except ImportError:
     KR_CONVERT = lambda x: x
+
+
+# Unicode ranges (common enough for filenames)
+R_HANGUL = [(0xAC00, 0xD7AF), (0x1100, 0x11FF), (0x3130, 0x318F)]  # syllables + jamo
+R_HIRAGANA = [(0x3040, 0x309F)]
+R_KATAKANA = [(0x30A0, 0x30FF), (0x31F0, 0x31FF)]  # incl. phonetic extensions
+R_HAN = [(0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xF900, 0xFAFF)]     # Ext A, Unified, Compat
+
+
+def _has_any(s: str, ranges) -> bool:
+    for ch in s:
+        o = ord(ch)
+        for a, b in ranges:
+            if a <= o <= b:
+                return True
+    return False
+
+
+def detect_scripts(text: str) -> set[str]:
+    if not text:
+        return set()
+
+    scripts = set()
+    if _has_any(text, R_HANGUL):
+        scripts.add("kr")
+    if _has_any(text, R_HIRAGANA) or _has_any(text, R_KATAKANA):
+        scripts.add("jp")
+    if _has_any(text, R_HAN):
+        scripts.add("han")
+
+    # "han" is a category, not a language; we’ll interpret below.
+    return scripts
+
+
+def detect_language_bucket(text: str) -> str:
+    s = detect_scripts(text)
+    if not s:
+        return "other"
+
+    # Mixed cases
+    if "kr" in s and ("jp" in s or "han" in s):
+        return "mixed"
+    if "jp" in s and "kr" in s:
+        return "mixed"
+
+    if "kr" in s:
+        return "kr"
+    if "jp" in s:
+        return "jp"
+    if "han" in s:
+        return "cn"   # “Han-only” defaulting to CN
+    return "other"
 
 
 class CustomException(Exception):
@@ -128,14 +185,27 @@ def foreign(text):
     if text is None:
         return None
 
-    if type(text) != str:
-        d_text = str(text).deocde("utf-8")
+    if not isinstance(text, str):
+        if isinstance(text, (bytes, bytearray)):
+            d_text = text.decode("utf-8", errors="replace")
+        else:
+            d_text = str(text)
     else:
         d_text = text
 
-    d_text = KR_CONVERT(d_text)  # run korean first; JP will remove korean if existing
-    d_text = JP_CONVERT(d_text)
-    d_text = CN_CONVERT(d_text)
+    scripts = detect_scripts(d_text)
+
+    # Korean first if Hangul present
+    if "kr" in scripts:
+        d_text = KR_CONVERT(d_text)
+
+    # Japanese only if kana present (this avoids CN -> JP kanji readings)
+    if "jp" in scripts:
+        d_text = JP_CONVERT(d_text)
+
+    # Chinese only if Han present AND no kana (i.e. Han-only or Han+Latin/etc.)
+    if "han" in scripts and "jp" not in scripts:
+        d_text = CN_CONVERT(d_text)
 
     return d_text
 

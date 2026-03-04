@@ -564,12 +564,21 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-japanese = [
+cjk = [
+    { name = "korean-romanizer" },
+    { name = "pykakasi", version = "2.2.1", source = { registry = "http://stinkbox:5005/index/" }, marker = "python_full_version < '3.8'" },
+    { name = "pykakasi", version = "2.3.0", source = { registry = "http://stinkbox:5005/index/" }, marker = "python_full_version >= '3.8'" },
+    { name = "pypinyin" },
+]
+jp = [
     { name = "pykakasi", version = "2.2.1", source = { registry = "http://stinkbox:5005/index/" }, marker = "python_full_version < '3.8'" },
     { name = "pykakasi", version = "2.3.0", source = { registry = "http://stinkbox:5005/index/" }, marker = "python_full_version >= '3.8'" },
 ]
-korean = [
+kr = [
     { name = "korean-romanizer" },
+]
+zh = [
+    { name = "pypinyin" },
 ]
 
 [package.dev-dependencies]
@@ -590,12 +599,16 @@ dev = [
 requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
     { name = "coverage", specifier = ">=7.2.7" },
-    { name = "korean-romanizer", marker = "extra == 'korean'" },
+    { name = "korean-romanizer", marker = "extra == 'cjk'", specifier = ">=0.28.0" },
+    { name = "korean-romanizer", marker = "extra == 'kr'", specifier = ">=0.28.0" },
     { name = "mutagen", specifier = ">=1.30" },
-    { name = "pykakasi", marker = "extra == 'japanese'" },
+    { name = "pykakasi", marker = "extra == 'cjk'", specifier = ">=2.2.1" },
+    { name = "pykakasi", marker = "extra == 'jp'", specifier = ">=2.2.1" },
+    { name = "pypinyin", marker = "extra == 'cjk'", specifier = ">=0.55.0" },
+    { name = "pypinyin", marker = "extra == 'zh'", specifier = ">=0.55.0" },
     { name = "pytest", specifier = ">=7.4.4" },
 ]
-provides-extras = ["korean", "japanese"]
+provides-extras = ["jp", "kr", "zh", "cjk"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -722,6 +735,15 @@ dependencies = [
 sdist = { url = "http://stinkbox:5005/index/pykakasi/pykakasi-2.3.0.tar.gz", hash = "sha256:fa052a8e63f59fb8d6569abbe719a8c9f9daf15ed27a67a56ab1705f0f67b0a1" }
 wheels = [
     { url = "http://stinkbox:5005/index/pykakasi/pykakasi-2.3.0-py3-none-any.whl", hash = "sha256:26d21b090048ff45c6a4d8e962426b7951767216008ec30358e8a9d74af77f29" },
+]
+
+[[package]]
+name = "pypinyin"
+version = "0.55.0"
+source = { registry = "http://stinkbox:5005/index/" }
+sdist = { url = "http://stinkbox:5005/index/pypinyin/pypinyin-0.55.0.tar.gz", hash = "sha256:b5711b3a0c6f76e67408ec6b2e3c4987a3a806b7c528076e7c7b86fcf0eaa66b" }
+wheels = [
+    { url = "http://stinkbox:5005/index/pypinyin/pypinyin-0.55.0-py2.py3-none-any.whl", hash = "sha256:d53b1e8ad2cdb815fb2cb604ed3123372f5a28c6f447571244aca36fc62a286f" },
 ]
 
 [[package]]

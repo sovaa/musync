@@ -80,10 +80,13 @@ def test_op_fix_lock_file(mock_app, tmp_path):
     
     path = Mock()
     path.inroot.return_value = True
+    path.exists.return_value = True
     path.isfile.return_value = True
     path.path = str(lock_file)
     path.meta = None
     
+    mock_app.locker.islocked.return_value = False
+    mock_app.locker.parentislocked.return_value = False
     mock_app.lambdaenv.lockdb = Mock(return_value=str(lock_file))
     op_fix(mock_app, path)
     mock_app.printer.action.assert_called()
@@ -97,10 +100,13 @@ def test_op_fix_remove_bad_file(mock_app, tmp_path):
     
     path = Mock()
     path.inroot.return_value = True
+    path.exists.return_value = True
     path.isfile.return_value = True
     path.path = str(test_file)
     path.meta = None
     
+    mock_app.locker.islocked.return_value = False
+    mock_app.locker.parentislocked.return_value = False
     mock_app.lambdaenv.lockdb = Mock(return_value="")
     mock_app.lambdaenv.rm = Mock()
     op_fix(mock_app, path)
@@ -117,6 +123,7 @@ def test_op_fix_empty_dir(mock_app, tmp_path):
     
     path = Mock()
     path.inroot.return_value = True
+    path.isfile.return_value = False
     path.isdir.return_value = True
     path.isempty.return_value = True
     path.relativepath.return_value = "emptydir"
@@ -138,6 +145,7 @@ def test_op_fix_empty_dir_pretend(mock_app, tmp_path):
     
     path = Mock()
     path.inroot.return_value = True
+    path.isfile.return_value = False
     path.isdir.return_value = True
     path.isempty.return_value = True
     path.relativepath.return_value = "emptydir"
@@ -159,6 +167,7 @@ def test_op_fix_dir_not_empty(mock_app, tmp_path):
     
     path = Mock()
     path.inroot.return_value = True
+    path.isfile.return_value = False
     path.isdir.return_value = True
     path.isempty.return_value = False
     path.relativepath.return_value = "testdir"
