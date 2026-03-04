@@ -1,12 +1,64 @@
-Requires:
+Requirements
+============
 
-    * Python 2.6
-    * Mutagen > 1.17
-    * Latest Setuptools
+  * Python 3.12 or newer
+  * Mutagen >= 1.30
+  * Click >= 8.0
 
-How to install (as root or with sudo):
+How to install
+==============
 
-#> sudo python setup.py install
-#> sudo cp share/musync.conf share/musync.rules /etc/
+We recommend using uv (https://docs.astral.sh/uv/) so you can run
+`musync` from any directory without activating an environment.
 
-Read share/musync.conf for instructions on how to configure.
+Windows
+-------
+
+  1. Install uv (e.g. from https://docs.astral.sh/uv/getting-started/).
+
+  2. From the project directory:
+
+     > uv tool install -e .
+
+  3. Ensure uv's tool directory is on your PATH (uv usually does this).
+     Check with:  uv tool dir
+     Then run:    musync --version
+
+  To install into an existing environment (e.g. conda) instead:
+
+     > uv pip install -e . --system
+
+     (Use a Python 3.12+ environment; the project requires Python >= 3.12.)
+
+Linux
+-----
+
+  1. Install uv (e.g.  curl -LsSf https://astral.sh/uv/install.sh | sh  ).
+
+  2. From the project directory:
+
+     $ uv tool install -e .
+
+  3. Ensure uv's tool directory is on your PATH (see  uv tool dir ).
+     Then run:  musync --version
+
+  To install system-wide (as root) with pip:
+
+     $ sudo pip install -e /path/to/musync
+
+  Or into a virtualenv:
+
+     $ python3 -m venv .venv
+     $ source .venv/bin/activate
+     $ pip install -e .
+
+Configuration
+=============
+
+  * Linux:  copy  share/musync.conf  and  share/musync.rules  to  ~/.musync/
+    or install to  /etc/  for system-wide config.
+
+  * Windows:  copy  share\musync.conf  and  share\musync.rules  to
+    %USERPROFILE%\.musync\  (or the paths shown in  share\musync.conf ).
+
+  Read  share/musync.conf  (or  docs/configuration.md ) for how to configure.
