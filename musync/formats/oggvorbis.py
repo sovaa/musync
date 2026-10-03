@@ -28,7 +28,6 @@ class VCFLACMetaFile(meta.MetaFile):
         "album": "album",
         "date": "year",
         "tracknumber": "track",
-        "albumartistsort": "artist",
         "artist": "artist",
         "title": "title",
     }

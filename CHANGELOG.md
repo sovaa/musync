@@ -16,6 +16,7 @@
 
 ### Fixed
 
+- **FLAC**: Keep the artist tag as stored when adding. Album artist sort names such as "Croce, Jim" and "X, The" no longer replace "Jim Croce" and "The X".
 - **printer**: On Windows, skip curses entirely (no import, no setupterm) to avoid hang/memory blowup; make curses optional on other platforms when unavailable.
 - **entrypoint**: Handle `--version` / `-V` before creating AppSession so version prints and exits without loading config or printer (avoids startup hang on Windows).
 - **opts**: Mutable default argument in `LambdaEnviron.__init__` (use `d=None`).

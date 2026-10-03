@@ -141,6 +141,27 @@ def test_mp4_metafile_track_first_element():
     assert meta.track == 5
 
 
+def test_flac_metafile_keeps_artist_name():
+    """FLAC uses the artist tag. Sort names must not rewrite it."""
+    f = Mock()
+    f.filename = "x.flac"
+    tags = {
+        "albumartistsort": ["Croce, Jim"],
+        "artist": ["Jim Croce"],
+        "album": ["Greatest"],
+    }
+    meta = ogg_module.VCFLACMetaFile(f, tags)
+    assert meta.artist == "Jim Croce"
+    assert meta.album == "Greatest"
+
+    tags = {
+        "albumartistsort": ["Beatles, The"],
+        "artist": ["The Beatles"],
+    }
+    meta = ogg_module.VCFLACMetaFile(f, tags)
+    assert meta.artist == "The Beatles"
+
+
 def test_ogg_metafile_track_int():
     """OggVCommentMetaFile converts track to int."""
     f = Mock()
