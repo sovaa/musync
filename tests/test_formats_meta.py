@@ -16,6 +16,8 @@ def test_metafile_initialization():
     assert meta.title is None
     assert meta.track is None
     assert meta.year is None
+    assert meta.disc is None
+    assert meta.disctotal is None
     assert meta.filename == "test.mp3"
 
 

@@ -333,4 +333,16 @@ def in_tmp(func, *args, **kw):
         os.unlink(tmp)
 
 
-__all__ = ["ue", "case", "inspect", "each", "in_tmp"]
+__all__ = [
+    "ue",
+    "foreign",
+    "md5sum",
+    "lexer",
+    "case",
+    "inspect",
+    "each",
+    "in_tmp",
+    "system",
+    "execute",
+    "filter",
+]

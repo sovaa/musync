@@ -2,6 +2,7 @@
 
 ### Added
 
+- **Metadata**: Expose `meta.disc` and `meta.disctotal` from ID3 `TPOS`, Vorbis/FLAC `DISCNUMBER` plus `DISCTOTAL` or `TOTALDISCS`, and MP4 `disk`, so multi-disc releases can be split in `targetpath`.
 - **Fix (op_fix)**: When target path is a symlink, print a notice ("target is link - ...") instead of silently skipping.
 - **Tests**: New and extended tests for hints, dbman, rulelexer, formats, printer, opts; coverage raised to 80%+.
 

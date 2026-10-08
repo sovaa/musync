@@ -38,6 +38,7 @@ class MP4TagsMetaFile(meta.MetaFile):
         "aART": "artist",
         #'sonm': "track",
         "trkn": "track",
+        "disk": "disc",
         "purd": "year",
         "\xa9day": "year",
     }

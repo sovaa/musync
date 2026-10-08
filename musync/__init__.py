@@ -311,6 +311,8 @@ def op_inspect(app, source):
     app.printer.blanknotice("album:     ", repr(source.meta.album))
     app.printer.blanknotice("title:     ", repr(source.meta.title))
     app.printer.blanknotice("track:     ", repr(source.meta.track))
+    app.printer.blanknotice("disc:      ", repr(source.meta.disc))
+    app.printer.blanknotice("disctotal: ", repr(source.meta.disctotal))
     app.printer.blanknotice("year:      ", repr(source.meta.year))
     app.printer.blanknotice(
         "targetpath:",

@@ -11,6 +11,7 @@ class ID3MetaFile(meta.MetaFile):
         "TXXX": "year",
         "TXXX:date": "year",
         "TRCK": "track",
+        "TPOS": "disc",
         "TPE1": "artist",
         "TIT2": "title",
     }

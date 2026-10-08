@@ -9,6 +9,9 @@ class OggVCommentMetaFile(meta.MetaFile):
         "album": "album",
         "date": "year",
         "tracknumber": "track",
+        "discnumber": "disc",
+        "disctotal": "disctotal",
+        "totaldiscs": "disctotal",
         "artist": "artist",
         "title": "title",
     }
@@ -28,6 +31,9 @@ class VCFLACMetaFile(meta.MetaFile):
         "album": "album",
         "date": "year",
         "tracknumber": "track",
+        "discnumber": "disc",
+        "disctotal": "disctotal",
+        "totaldiscs": "disctotal",
         "artist": "artist",
         "title": "title",
     }
